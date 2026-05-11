@@ -1,64 +1,80 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import Webcam from 'react-webcam';
+import { FilesetResolver, HandLandmarker, DrawingUtils } from '@mediapipe/tasks-vision';
 
 const Home = () => {
   const webcamRef = useRef(null);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const canvasRef = useRef(null);
+  let handLandmarker = undefined;
 
-  // Styling for the webcam container
-  const videoConstraints = {
-    width: 640,
-    height: 480,
-    facingMode: "user",
+  // 1. Load the MediaPipe Model
+  const createHandLandmarker = async () => {
+    const vision = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+    );
+    handLandmarker = await HandLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+        delegate: "GPU"
+      },
+      runningMode: "VIDEO",
+      numHands: 2
+    });
+    renderLoop();
   };
 
+  // 2. The Animation Loop (Detects hand every frame)
+  const renderLoop = async () => {
+  if (webcamRef.current && webcamRef.current.video.readyState === 4) {
+    const video = webcamRef.current.video;
+    const startTimeMs = performance.now();
+    const results = await handLandmarker.detectForVideo(video, startTimeMs);
+
+    const canvasCtx = canvasRef.current.getContext("2d");
+    const drawingUtils = new DrawingUtils(canvasCtx);
+    
+    // 1. Clear the canvas
+    canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+    // 2. IMPORTANT: Flip the canvas context to match the mirrored webcam
+    canvasCtx.save(); // Save the "normal" state
+    canvasCtx.translate(canvasRef.current.width, 0);
+    canvasCtx.scale(-1, 1); // Flip horizontally
+
+    if (results.landmarks) {
+      for (const landmarks of results.landmarks) {
+        // Draw the skeleton while the canvas is flipped
+        drawingUtils.drawConnectors(landmarks, HandLandmarker.HAND_CONNECTIONS, {
+          color: "#00FF00",
+          lineWidth: 5
+        });
+        drawingUtils.drawLandmarks(landmarks, { color: "#FF0000", lineWidth: 2 });
+      }
+    }
+    
+    // 3. Restore the canvas so the flip doesn't "double up" next time
+    canvasCtx.restore();
+  }
+  requestAnimationFrame(renderLoop);
+};
+
+  useEffect(() => {
+    createHandLandmarker();
+  }, []);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px' }}>
-      <h2>ASL Real-Time Detection</h2>
-      
-      <div style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#000' }}>
-        {cameraEnabled ? (
-          <Webcam
-            audio={false}
-            ref={webcamRef}
-            screenshotFormat="image/jpeg"
-            videoConstraints={videoConstraints}
-            mirrored={true}
-            style={{ width: '100%', maxWidth: '640px', height: 'auto' }}
-          />
-        ) : (
-          <div style={{ width: '640px', height: '480px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff' }}>
-            Camera is Off
-          </div>
-        )}
-
-        {/* This Canvas is where we will draw MediaPipe landmarks later */}
-        <canvas
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-          }}
-        />
-      </div>
-
-      <div style={{ marginTop: '20px' }}>
-        <button 
-          onClick={() => setCameraEnabled(!cameraEnabled)}
-          style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '5px' }}
-        >
-          {cameraEnabled ? "Stop Camera" : "Start Camera"}
-        </button>
-      </div>
-
-      <div style={{ marginTop: '20px', padding: '15px', background: '#f0f0f0', borderRadius: '8px', width: '100%', maxWidth: '640px' }}>
-        <strong>Detected Text:</strong> 
-        <span style={{ marginLeft: '10px', fontSize: '1.2rem', color: '#007bff' }}>
-           Waiting for hand...
-        </span>
-      </div>
+    <div style={{ position: 'relative', width: '640px', margin: 'auto' }}>
+      <Webcam
+        ref={webcamRef}
+        mirrored={true}
+        style={{ width: '640px', height: '480px' }}
+      />
+      <canvas
+        ref={canvasRef}
+        width="640"
+        height="480"
+        style={{ position: 'absolute', top: 0, left: 0 }}
+      />
     </div>
   );
 };
