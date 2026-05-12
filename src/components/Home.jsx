@@ -2,6 +2,9 @@ import React, { useRef, useEffect , useState} from 'react';
 import Webcam from 'react-webcam';
 import { FilesetResolver, HandLandmarker, DrawingUtils } from '@mediapipe/tasks-vision';
 import { detectASL } from '../utils/aslLogic';
+import * as fp from "fingerpose";
+import ASLAlphabet from "../utils/index";
+
 
 const Home = () => {
   const webcamRef = useRef(null);
@@ -29,36 +32,54 @@ const Home = () => {
   const renderLoop = async () => {
   if (webcamRef.current && webcamRef.current.video.readyState === 4) {
     const video = webcamRef.current.video;
-    const startTimeMs = performance.now();
-    const results = await handLandmarker.detectForVideo(webcamRef.current.video, performance.now());
+    const results = await handLandmarker.detectForVideo(video, performance.now());
 
+    // --- 1. THE AI DETECTION LOGIC ---
+if (results.landmarks && results.landmarks.length > 0 && results.landmarks[0]) {
+  
+  // Transform landmarks for fingerpose: [[x,y,z], [x,y,z]...]
+  // We use results.landmarks[0] for the first hand found
+  const transformedLandmarks = results.landmarks[0].map(l => [l.x, l.y, l.z]);
+
+  // IMPORTANT: Ensure the array has exactly 21 points before estimating
+  if (transformedLandmarks.length === 21) {
+    const GE = new fp.GestureEstimator(ASLAlphabet);
+    
+    // Estimate needs the landmarks array and a confidence threshold
+    const gesture = await GE.estimate(transformedLandmarks, 8.0);
+
+    if (gesture.gestures && gesture.gestures.length > 0) {
+      const confidence = gesture.gestures.map((p) => p.score);
+      const maxConfidence = confidence.indexOf(Math.max(...confidence));
+      const result = gesture.gestures[maxConfidence].name;
+      setPrediction(result); 
+    } else {
+      setPrediction("Analyzing...");
+    }
+  }
+} else {
+  setPrediction("No Hand Detected");
+}
+
+    // --- 2. THE DRAWING LOGIC ---
     const canvasCtx = canvasRef.current.getContext("2d");
     const drawingUtils = new DrawingUtils(canvasCtx);
     
-    // 1. Clear the canvas
     canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-
-    // 2. IMPORTANT: Flip the canvas context to match the mirrored webcam
-    canvasCtx.save(); // Save the "normal" state
+    canvasCtx.save();
     canvasCtx.translate(canvasRef.current.width, 0);
-    canvasCtx.scale(-1, 1); // Flip horizontally
+    canvasCtx.scale(-1, 1);
 
     if (results.landmarks && results.landmarks.length > 0) {
-      const letter = detectASL(results.landmarks[0]);
-      setPrediction(letter); // Update the UI with the letter
       for (const landmarks of results.landmarks) {
-        // Draw the skeleton while the canvas is flipped
         drawingUtils.drawConnectors(landmarks, HandLandmarker.HAND_CONNECTIONS, {
           color: "#00FF00",
           lineWidth: 5
         });
         drawingUtils.drawLandmarks(landmarks, { color: "#FF0000", lineWidth: 2 });
       }
-    } else {
-      setPrediction("No Hand Detected");
     }
     
-    // 3. Restore the canvas so the flip doesn't "double up" next time
     canvasCtx.restore();
   }
   requestAnimationFrame(renderLoop);
