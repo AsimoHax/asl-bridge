@@ -24,6 +24,7 @@ import {wSign} from './Wsign';
 import {xSign} from './Xsign';
 import {ySign} from './Ysign';
 import {zSign} from './Zsign';
+import { appleSign } from './Applesign';
 
 
 
@@ -54,6 +55,7 @@ const ASLAlphabet = [
     xSign,
     ySign,
     zSign,
+    appleSign,
 ];
 
 

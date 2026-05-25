@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import Home from './components/Home.jsx';
+import Home from './components/Home_New.jsx';
 
 function App() {
   return (
@@ -13,7 +13,7 @@ function App() {
 
       {/* Page Routing Logic */}
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home/>} />
       </Routes>
     </Router>
   );
