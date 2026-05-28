@@ -1,0 +1,379 @@
+/* ───────────────────────────────────────────
+   Library — ASL Alphabet Cards
+   ─────────────────────────────────────────── */
+
+/* ── Page wrapper ────────────────────────── */
+
+.library-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 32px 64px;
+  min-height: calc(100svh - 64px);
+}
+
+/* ── Header ──────────────────────────────── */
+
+.library-header {
+  text-align: center;
+  margin-bottom: 40px;
+  max-width: 560px;
+}
+
+.library-header-badge {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  margin-bottom: 12px;
+}
+
+.library-title {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -1.2px;
+  margin: 0 0 8px;
+  color: var(--text-h);
+}
+
+.library-subtitle {
+  font-size: 16px;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+/* ── Search ──────────────────────────────── */
+
+.library-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.library-search-icon {
+  position: absolute;
+  left: 16px;
+  font-size: 16px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.library-search {
+  width: 100%;
+  padding: 12px 44px 12px 44px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 15px;
+  font-family: var(--sans);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.library-search::placeholder {
+  color: var(--text);
+  opacity: 0.6;
+}
+
+.library-search:focus {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.library-search-clear {
+  position: absolute;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--border);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.library-search-clear:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ── Count ───────────────────────────────── */
+
+.library-count {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.library-count strong {
+  color: var(--accent);
+}
+
+/* ── Card grid ───────────────────────────── */
+
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  width: 100%;
+  max-width: 1200px;
+}
+
+/* ── Sign card (flip) ────────────────────── */
+
+.sign-card {
+  perspective: 900px;
+  cursor: pointer;
+  outline: none;
+  border-radius: 18px;
+}
+
+.sign-card:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-border);
+  border-radius: 18px;
+}
+
+.sign-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+  border-radius: 18px;
+}
+
+.sign-card.flipped .sign-card-inner {
+  transform: rotateY(180deg);
+}
+
+/* ── Card faces (shared) ─────────────────── */
+
+.sign-card-front,
+.sign-card-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Front face ──────────────────────────── */
+
+.sign-card-front {
+  z-index: 2;
+}
+
+.sign-card-image-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--code-bg);
+}
+
+.sign-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.sign-card:hover .sign-card-image {
+  transform: scale(1.05);
+}
+
+.sign-card-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(170, 59, 255, 0.88);
+  color: #fff;
+  font-family: var(--heading);
+  font-size: 20px;
+  font-weight: 800;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(170, 59, 255, 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  .sign-card-badge {
+    background: rgba(192, 132, 252, 0.88);
+    box-shadow: 0 2px 10px rgba(192, 132, 252, 0.4);
+  }
+}
+
+.sign-card-body {
+  flex: 1;
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sign-card-letter {
+  font-family: var(--heading);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-h);
+  margin: 0 0 6px;
+}
+
+.sign-card-desc {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+  margin: 0;
+  flex: 1;
+}
+
+.sign-card-hint {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.sign-card:hover .sign-card-hint {
+  opacity: 1;
+}
+
+/* ── Back face ───────────────────────────── */
+
+.sign-card-back {
+  transform: rotateY(180deg);
+  z-index: 1;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 28px;
+  background: linear-gradient(
+    145deg,
+    var(--accent-bg) 0%,
+    var(--bg) 100%
+  );
+}
+
+.sign-card-back-letter {
+  font-family: var(--heading);
+  font-size: 72px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 16px;
+  opacity: 0.18;
+}
+
+.sign-card-tip-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-h);
+  margin-bottom: 10px;
+}
+
+.sign-card-tip {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Empty state ─────────────────────────── */
+
+.library-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text);
+}
+
+.library-empty-icon {
+  font-size: 52px;
+}
+
+.library-empty p {
+  font-size: 15px;
+}
+
+.library-reset-btn {
+  margin-top: 6px;
+  padding: 10px 24px;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.library-reset-btn:hover {
+  background: #9425e6;
+  transform: translateY(-1px);
+}
+
+.library-reset-btn:active {
+  transform: translateY(0);
+}
+
+/* ── Responsive ──────────────────────────── */
+
+@media (max-width: 960px) {
+  .library-page {
+    padding: 24px 16px 48px;
+  }
+
+  .library-title {
+    font-size: 28px;
+  }
+
+  .library-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
+  .sign-card-inner {
+    min-height: 380px;
+  }
+}
+
+@media (max-width: 480px) {
+  .library-grid {
+    grid-template-columns: 1fr;
+  }
+}

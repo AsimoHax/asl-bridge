@@ -1,0 +1,104 @@
+/* ───────────────────────────────────────────
+   App Navigation Bar
+   ─────────────────────────────────────────── */
+
+.app-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+@media (prefers-color-scheme: dark) {
+  .app-nav {
+    background: rgba(22, 23, 29, 0.82);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* ── Brand ───────────────────────────────── */
+
+.app-nav-brand {
+  font-family: var(--heading);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--text-h);
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Links container ─────────────────────── */
+
+.app-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Individual link ─────────────────────── */
+
+.app-nav-link {
+  position: relative;
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.2s, background 0.2s;
+}
+
+.app-nav-link:hover {
+  color: var(--text-h);
+  background: var(--accent-bg);
+}
+
+/* Active state */
+.app-nav-link.active {
+  color: var(--accent);
+  background: var(--accent-bg);
+  font-weight: 600;
+}
+
+.app-nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+}
+
+/* ── Responsive ──────────────────────────── */
+
+@media (max-width: 640px) {
+  .app-nav {
+    padding: 0 16px;
+    height: 56px;
+  }
+
+  .app-nav-brand {
+    font-size: 17px;
+  }
+
+  .app-nav-link {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+}

@@ -16,12 +16,15 @@ const Home = () => {
 
   const [prediction, setPrediction] = useState("Waiting");
   const [voteStats, setVoteStats] = useState({});
+  const [translatedText, setTranslatedText] = useState('');
 
   const gestureHistoryRef = useRef([]);
 
   // --- Mảng lưu tọa độ quỹ đạo ngón tay ---
   const pinkyPathRef = useRef([]); // Lưu tọa độ ngón út (cho chữ J)
   const indexPathRef = useRef([]); // Lưu tọa độ ngón trỏ (cho chữ Z)
+  const stableCountRef = useRef(0);
+  const bestScoreRef = useRef(0);
 
   const BUFFER_SIZE = 30; // ~1 giây quét
 
@@ -122,14 +125,15 @@ const Home = () => {
           if (gesture.gestures && gesture.gestures.length > 0) {
             const confidence = gesture.gestures.map((p) => p.score);
             const maxConfidence = confidence.indexOf(Math.max(...confidence));
-            currentFrameGesture = gesture.gestures[maxConfidence].name;
+            fingerposeGesture = gesture.gestures[maxConfidence].name;
+            bestScoreRef.current = gesture.gestures[maxConfidence].score;
           }
         }
       }
 
       // --- 2. VOTING BUFFER & MOTION TRACKING ---
       if (handDetected) {
-        gestureHistoryRef.current.push(currentFrameGesture);
+        gestureHistoryRef.current.push(fingerposeGesture);
         if (gestureHistoryRef.current.length > BUFFER_SIZE) gestureHistoryRef.current.shift();
 
         let { mostFrequent, counts } = getMostFrequentGesture(gestureHistoryRef.current);
@@ -143,10 +147,25 @@ const Home = () => {
 
         setPrediction(mostFrequent);
         setVoteStats(counts);
+
+        // Auto-confirm letter after ~1s of sustained high confidence
+        const conf = counts[mostFrequent] ? (counts[mostFrequent] / BUFFER_SIZE) : 0;
+        if (mostFrequent.length === 1 && conf >= 0.7) {
+          stableCountRef.current++;
+          if (stableCountRef.current >= 60) {
+            setTranslatedText(prev => prev + mostFrequent);
+            stableCountRef.current = 0;
+            gestureHistoryRef.current = [];
+          }
+        } else {
+          stableCountRef.current = 0;
+        }
       } else {
         if (gestureHistoryRef.current.length > 0) gestureHistoryRef.current.shift();
         pinkyPathRef.current = [];
         indexPathRef.current = [];
+        stableCountRef.current = 0;
+        bestScoreRef.current = 0;
         setPrediction("No Hand Detected");
         setVoteStats({});
       }
@@ -182,6 +201,9 @@ const Home = () => {
 
   // Determine status label
   const isDetecting = prediction !== "Waiting" && prediction !== "No Hand Detected";
+  const confidence = isDetecting
+    ? Math.round(bestScoreRef.current * 10)
+    : 0;
   const statusClass = prediction === "No Hand Detected"
     ? "status-none"
     : prediction === "Waiting"
@@ -246,55 +268,58 @@ const Home = () => {
         {/* Sidebar stats */}
         <div className="stats-panel">
           <div className="stats-header">
-            <span className="stats-icon">📊</span>
+            <span className="stats-icon">🔤</span>
             <div>
-              <div className="stats-title">Frame Analysis</div>
-              <div className="stats-subtitle">Last {BUFFER_SIZE} frames</div>
+              <div className="stats-title">Recognition</div>
+              <div className="stats-subtitle">Real-time detection</div>
             </div>
           </div>
 
           <div className="stats-divider" />
 
-          <ul className="stats-list">
-            {Object.keys(voteStats).length === 0 ? (
-              <li className="stats-empty">
-                <span className="stats-empty-icon">👋</span>
-                <span>Show your hand to start</span>
-              </li>
+          {/* Detected letter + confidence */}
+          <div className="recognition-box">
+            {isDetecting ? (
+              <>
+                <span className="recognition-letter">{prediction}</span>
+                <span className="recognition-confidence">{confidence}%</span>
+              </>
             ) : (
-              Object.entries(voteStats)
-                .sort((a, b) => b[1] - a[1])
-                .map(([gesture, count]) => {
-                  const pct = Math.round((count / BUFFER_SIZE) * 100);
-                  const isWinner = gesture === prediction;
-                  return (
-                    <li key={gesture} className={`stats-item ${isWinner ? 'stats-item-winner' : ''}`}>
-                      <div className="stats-item-top">
-                        <span className={`stats-gesture ${isWinner ? 'gesture-winner' : ''}`}>
-                          {isWinner && <span className="winner-dot" />}
-                          {gesture}
-                        </span>
-                        <span className="stats-count">{count}<span className="stats-of">/{BUFFER_SIZE}</span></span>
-                      </div>
-                      <div className="stats-bar-track">
-                        <div
-                          className={`stats-bar-fill ${isWinner ? 'bar-winner' : ''}`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </li>
-                  );
-                })
+              <span className="recognition-placeholder">
+                {prediction === "Waiting" ? "Initializing…" : "Show your hand 👋"}
+              </span>
             )}
-          </ul>
+          </div>
 
-          {/* Current prediction summary */}
           {isDetecting && (
-            <div className="stats-result">
-              <div className="stats-result-label">Current Prediction</div>
-              <div className="stats-result-letter">{prediction}</div>
+            <div className="recognition-bar-track">
+              <div
+                className="recognition-bar-fill"
+                style={{ width: `${confidence}%` }}
+              />
             </div>
           )}
+
+          <div className="stats-divider" />
+
+          {/* Translated text */}
+          <div className="translated-section">
+            <div className="translated-label">📝 Translated Text</div>
+            <div className="translated-box">
+              {translatedText ? (
+                <span className="translated-text">{translatedText}</span>
+              ) : (
+                <span className="translated-placeholder">Letters will appear here…</span>
+              )}
+            </div>
+            {translatedText && (
+              <div className="translated-actions">
+                <button className="translated-clear" onClick={() => setTranslatedText('')}>
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
