@@ -18,43 +18,14 @@ const Home = () => {
   const [translatedText, setTranslatedText] = useState('');
   const [letterHistory, setLetterHistory] = useState([]);
   const [cameraOn, setCameraOn] = useState(false);
-  const [demoMode, setDemoMode] = useState(true);
 
   const gestureHistoryRef = useRef([]);
   const pinkyPathRef = useRef([]);
   const indexPathRef = useRef([]);
   const stableCountRef = useRef(0);
   const bestScoreRef = useRef(0);
-  const demoIntervalRef = useRef(null);
 
   const BUFFER_SIZE = 30;
-
-  // --- Demo Mode Mock Detection ---
-  const demoLetters = ['H', 'E', 'L', 'L', 'O'];
-  const demoIndexRef = useRef(0);
-
-  const startDemoMode = () => {
-    demoIndexRef.current = 0;
-    demoIntervalRef.current = setInterval(() => {
-      const letter = demoLetters[demoIndexRef.current % demoLetters.length];
-      setPrediction(letter);
-      setTranslatedText(prev => prev + letter);
-      setLetterHistory(prev => [...prev, letter]);
-      demoIndexRef.current++;
-      if (demoIndexRef.current >= demoLetters.length) {
-        clearInterval(demoIntervalRef.current);
-        demoIntervalRef.current = null;
-        setTimeout(() => setPrediction("Waiting"), 2000);
-      }
-    }, 1500);
-  };
-
-  const stopDemoMode = () => {
-    if (demoIntervalRef.current) {
-      clearInterval(demoIntervalRef.current);
-      demoIntervalRef.current = null;
-    }
-  };
 
   // --- Real Camera Logic ---
   const createHandLandmarker = async () => {
@@ -216,19 +187,12 @@ const Home = () => {
   };
 
   const handleStartCamera = () => {
-    if (demoMode) {
-      // In demo mode, simulate detection
-      setCameraOn(true);
-      startDemoMode();
-    } else {
-      setCameraOn(true);
-      createHandLandmarker();
-    }
+    setCameraOn(true);
+    createHandLandmarker();
   };
 
   const handleStopCamera = () => {
     setCameraOn(false);
-    stopDemoMode();
     setPrediction("Waiting");
     setVoteStats({});
   };
@@ -255,10 +219,6 @@ const Home = () => {
     setLetterHistory([]);
   };
 
-  useEffect(() => {
-    return () => stopDemoMode();
-  }, []);
-
   return (
     <div className="translator-page">
       {/* Header */}
@@ -269,23 +229,6 @@ const Home = () => {
         </p>
       </header>
 
-      {/* Info Banner */}
-      <div className="translator-banner">
-        <div className="banner-icon">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <circle cx="10" cy="10" r="9" stroke="#3B82F6" strokeWidth="2"/>
-            <text x="10" y="14.5" textAnchor="middle" fill="#3B82F6" fontSize="13" fontWeight="700" fontFamily="Inter, sans-serif">i</text>
-          </svg>
-        </div>
-        <div className="banner-text">
-          <strong>Demo Mode</strong>
-          <br />
-          This is a demonstration interface. Real ASL recognition requires machine learning models
-          (such as TensorFlow.js with hand-pose detection) or external APIs. The current version
-          shows mock detections to demonstrate the user experience.
-        </div>
-      </div>
-
       {/* Main 2-Column Grid */}
       <div className="translator-grid">
         {/* Left Column */}
@@ -295,27 +238,18 @@ const Home = () => {
             <div className="card-header">
               <h2 className="card-title">Camera Feed</h2>
               <div className="card-actions">
-                <button
-                  className={`btn btn-demo ${demoMode ? 'active' : ''}`}
-                  onClick={() => setDemoMode(!demoMode)}
-                >
-                  <svg className="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 1l1.796 3.64L14 5.42l-3 2.923.708 4.127L8 10.56l-3.708 1.91L5 8.343 2 5.42l4.204-.78L8 1z" fill="currentColor"/>
-                  </svg>
-                  Demo Mode
-                </button>
                 {!cameraOn ? (
                   <button className="btn btn-start" onClick={handleStartCamera}>
                     <svg className="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="23 7 16 12 23 17 23 7"/>
-                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                      <polygon points="23 7 16 12 23 17 23 7" />
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                     </svg>
                     Start Camera
                   </button>
                 ) : (
                   <button className="btn btn-stop" onClick={handleStopCamera}>
                     <svg className="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                     </svg>
                     Stop Camera
                   </button>
@@ -325,7 +259,7 @@ const Home = () => {
 
             {/* Video Area */}
             <div className="camera-viewport">
-              {cameraOn && !demoMode ? (
+              {cameraOn ? (
                 <>
                   <Webcam
                     ref={webcamRef}
@@ -345,19 +279,11 @@ const Home = () => {
                     </div>
                   )}
                 </>
-              ) : cameraOn && demoMode ? (
-                <div className="camera-demo-active">
-                  <div className="demo-pulse-ring"></div>
-                  <div className="demo-prediction-display">
-                    <span className="demo-letter">{prediction !== "Waiting" ? prediction : "..."}</span>
-                  </div>
-                  <p className="demo-status-text">Demo detection running...</p>
-                </div>
               ) : (
                 <div className="camera-off-state">
                   <div className="camera-off-icon">
                     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                      <circle cx="24" cy="24" r="22" stroke="#475569" strokeWidth="2" strokeDasharray="4 4"/>
+                      <circle cx="24" cy="24" r="22" stroke="#475569" strokeWidth="2" strokeDasharray="4 4" />
                       <text x="24" y="30" textAnchor="middle" fill="#94A3B8" fontSize="24" fontWeight="700" fontFamily="Inter, sans-serif">!</text>
                     </svg>
                   </div>
@@ -365,14 +291,6 @@ const Home = () => {
                   <p className="camera-off-sub">Click 'Start Camera' to begin</p>
                 </div>
               )}
-            </div>
-
-            {/* Footer Tip */}
-            <div className="camera-tip">
-              <span className="tip-icon">💡</span>
-              <span className="tip-text">
-                For production use, integrate TensorFlow.js with MediaPipe Hands or Google's ML Kit
-              </span>
             </div>
           </div>
 
@@ -390,10 +308,6 @@ const Home = () => {
               </li>
               <li>
                 <span className="step-number">3</span>
-                <span className="step-text">Form ASL letters and words</span>
-              </li>
-              <li>
-                <span className="step-number">4</span>
                 <span className="step-text">Watch the translation appear in real-time</span>
               </li>
             </ol>
@@ -410,23 +324,23 @@ const Home = () => {
                 {/* Copy */}
                 <button className="action-btn" onClick={handleCopy} title="Copy to clipboard">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                   </svg>
                 </button>
                 {/* Download */}
                 <button className="action-btn" onClick={handleDownload} title="Download as text">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
                   </svg>
                 </button>
                 {/* Delete/Clear */}
                 <button className="action-btn action-btn-danger" onClick={handleClearAll} title="Clear all">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                   </svg>
                 </button>
               </div>
@@ -440,7 +354,7 @@ const Home = () => {
                 ) : (
                   <div className="translation-empty">
                     <svg className="empty-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
                     <p className="empty-title">No translation yet</p>
                     <p className="empty-sub">Detected signs will appear here</p>

@@ -174,30 +174,6 @@
   flex-shrink: 0;
 }
 
-/* Demo Mode toggle */
-.btn-demo {
-  background: #F8FAFC;
-  color: #64748B;
-  border-color: #E2E8F0;
-}
-
-.btn-demo:hover {
-  background: #F1F5F9;
-  border-color: #CBD5E1;
-  color: #475569;
-}
-
-.btn-demo.active {
-  background: #FEF3C7;
-  color: #92400E;
-  border-color: #FCD34D;
-}
-
-.btn-demo.active:hover {
-  background: #FDE68A;
-  border-color: #F59E0B;
-}
-
 /* Start Camera */
 .btn-start {
   background: #0F172A;
@@ -325,66 +301,6 @@
 @keyframes badgePop {
   from { transform: scale(0.8); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
-}
-
-/* Camera Active — Demo Mode */
-.camera-demo-active {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-}
-
-.demo-pulse-ring {
-  position: absolute;
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  border: 2px solid rgba(59, 130, 246, 0.3);
-  animation: pulseRing 2s ease-in-out infinite;
-}
-
-@keyframes pulseRing {
-  0% { transform: scale(0.8); opacity: 1; }
-  100% { transform: scale(1.6); opacity: 0; }
-}
-
-.demo-prediction-display {
-  width: 80px;
-  height: 80px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #3B82F6, #6366F1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.4);
-  z-index: 1;
-  animation: demoGlow 1.5s ease-in-out infinite alternate;
-}
-
-@keyframes demoGlow {
-  from { box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3); }
-  to { box-shadow: 0 8px 48px rgba(99, 102, 241, 0.5); }
-}
-
-.demo-letter {
-  font-family: 'Inter', sans-serif;
-  font-size: 36px;
-  font-weight: 800;
-  color: #FFFFFF;
-  letter-spacing: -1px;
-}
-
-.demo-status-text {
-  font-family: 'Inter', sans-serif;
-  font-size: 13px;
-  color: #64748B;
-  margin: 0;
-  z-index: 1;
 }
 
 /* ── Camera Tip (Footer) ─────────────────── */

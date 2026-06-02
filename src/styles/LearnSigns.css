@@ -1,0 +1,457 @@
+/* ═══════════════════════════════════════════
+   Learn Signs — Interactive Practice Page
+   ═══════════════════════════════════════════ */
+
+/* ── Page Wrapper ─────────────────────────── */
+
+.learn-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 32px 64px;
+  min-height: calc(100svh - 64px);
+  background: #F4F7FC;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* ── Main Grid ────────────────────────────── */
+
+.learn-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+  width: 100%;
+  max-width: 1100px;
+  align-items: start;
+}
+
+.learn-camera-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.learn-sidebar-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Camera Card ──────────────────────────── */
+
+.learn-camera-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.learn-camera-card .card-header {
+  margin-bottom: 16px;
+}
+
+/* ── Camera Viewport ──────────────────────── */
+
+.learn-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #1E293B;
+}
+
+.learn-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+.learn-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Prediction overlay at bottom center */
+.learn-prediction-overlay {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  height: 72px;
+  padding: 0 24px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.learn-prediction-letter {
+  font-family: 'Inter', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -0.5px;
+}
+
+/* Camera Off State */
+.learn-camera-off {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.learn-camera-off-icon {
+  opacity: 0.4;
+  animation: learnFloat 3s ease-in-out infinite;
+}
+
+@keyframes learnFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.learn-camera-off-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #CBD5E1;
+  margin: 0;
+}
+
+.learn-camera-off-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #64748B;
+  margin: 0;
+}
+
+/* ── Card 1: Target Word ──────────────────── */
+
+.learn-word-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.learn-word-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.learn-word-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94A3B8;
+  margin: 0 0 4px;
+}
+
+.learn-word-value {
+  font-family: 'Inter', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.btn-new-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #3B82F6;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-new-word:hover {
+  background: #DBEAFE;
+  border-color: #93C5FD;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.btn-new-word:active {
+  transform: translateY(0);
+}
+
+/* Progress bar */
+.learn-progress-track {
+  height: 6px;
+  border-radius: 6px;
+  background: #E2E8F0;
+  overflow: hidden;
+}
+
+.learn-progress-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #3B82F6, #6366F1);
+  transition: width 0.4s ease;
+}
+
+.learn-progress-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748B;
+  margin: 0;
+}
+
+/* ── Card 2: Word Speller ─────────────────── */
+
+.learn-speller-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 28px 24px;
+}
+
+.learn-speller-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94A3B8;
+  margin: 0;
+}
+
+.learn-speller-letters {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.speller-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #334155;
+  background: #F8FAFC;
+  border: 2px solid #E2E8F0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.speller-letter:hover {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #2563EB;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
+}
+
+.speller-letter.active {
+  background: #3B82F6;
+  border-color: #3B82F6;
+  color: #FFFFFF;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+}
+
+.speller-letter.next {
+  border-color: #93C5FD;
+  animation: letterPulse 2s ease-in-out infinite;
+}
+
+.speller-letter.completed {
+  background: #DCFCE7;
+  border-color: #86EFAC;
+  color: #166534;
+  cursor: default;
+}
+
+.speller-letter.completed:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+@keyframes letterPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+}
+
+.learn-speller-hint {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: #94A3B8;
+  margin: 0;
+}
+
+/* ── Card 3: Reference Image ──────────────── */
+
+.learn-reference-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.learn-reference-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.learn-reference-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94A3B8;
+  margin: 0;
+}
+
+.learn-reference-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #EFF6FF;
+  color: #2563EB;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  animation: badgeBounce 0.3s ease-out;
+}
+
+@keyframes badgeBounce {
+  from { transform: scale(0.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.learn-reference-image-box {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #F8FAFC;
+  border: 1px solid #F1F5F9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s ease;
+}
+
+.learn-reference-image-box:hover {
+  border-color: #E2E8F0;
+}
+
+.learn-reference-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 14px;
+  animation: imgFadeIn 0.3s ease-out;
+}
+
+@keyframes imgFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.learn-reference-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  opacity: 0.5;
+}
+
+.learn-reference-empty p {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #94A3B8;
+  margin: 0;
+}
+
+/* ── Responsive ───────────────────────────── */
+
+@media (max-width: 960px) {
+  .learn-page {
+    padding: 20px 16px 48px;
+  }
+
+  .learn-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .learn-sidebar-col {
+    gap: 16px;
+  }
+
+  .learn-speller-card {
+    padding: 20px 16px;
+  }
+
+  .speller-letter {
+    width: 42px;
+    height: 42px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .learn-page {
+    padding: 16px 12px 40px;
+  }
+
+  .learn-word-value {
+    font-size: 22px;
+  }
+
+  .speller-letter {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+    border-radius: 10px;
+  }
+
+  .learn-reference-image-box {
+    aspect-ratio: 4 / 3;
+  }
+}

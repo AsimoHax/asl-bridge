@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Home from './components/Home_New.jsx';
+import LearnSigns from './components/LearnSigns.jsx';
 import Library from './components/Library.jsx';
 import './styles/App.nav.css';
 
@@ -29,6 +30,7 @@ function App() {
       <NavBar />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/dictionary" element={<LearnSigns />} />
         <Route path="/library" element={<Library />} />
       </Routes>
     </Router>
