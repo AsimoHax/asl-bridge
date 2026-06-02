@@ -5,37 +5,63 @@ import * as fp from "fingerpose";
 import ASLAlphabet from "../utils/index";
 import '../styles/Home.css';
 
-// Khởi tạo GestureEstimator 1 lần duy nhất
+// Initialize GestureEstimator once
 const GE = new fp.GestureEstimator(ASLAlphabet);
 
 const Home = () => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
-
   const handLandmarkerRef = useRef(null);
 
   const [prediction, setPrediction] = useState("Waiting");
   const [voteStats, setVoteStats] = useState({});
   const [translatedText, setTranslatedText] = useState('');
+  const [letterHistory, setLetterHistory] = useState([]);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [demoMode, setDemoMode] = useState(true);
 
   const gestureHistoryRef = useRef([]);
-
-  // --- Mảng lưu tọa độ quỹ đạo ngón tay ---
-  const pinkyPathRef = useRef([]); // Lưu tọa độ ngón út (cho chữ J)
-  const indexPathRef = useRef([]); // Lưu tọa độ ngón trỏ (cho chữ Z)
+  const pinkyPathRef = useRef([]);
+  const indexPathRef = useRef([]);
   const stableCountRef = useRef(0);
   const bestScoreRef = useRef(0);
+  const demoIntervalRef = useRef(null);
 
-  const BUFFER_SIZE = 30; // ~1 giây quét
+  const BUFFER_SIZE = 30;
 
+  // --- Demo Mode Mock Detection ---
+  const demoLetters = ['H', 'E', 'L', 'L', 'O'];
+  const demoIndexRef = useRef(0);
+
+  const startDemoMode = () => {
+    demoIndexRef.current = 0;
+    demoIntervalRef.current = setInterval(() => {
+      const letter = demoLetters[demoIndexRef.current % demoLetters.length];
+      setPrediction(letter);
+      setTranslatedText(prev => prev + letter);
+      setLetterHistory(prev => [...prev, letter]);
+      demoIndexRef.current++;
+      if (demoIndexRef.current >= demoLetters.length) {
+        clearInterval(demoIntervalRef.current);
+        demoIntervalRef.current = null;
+        setTimeout(() => setPrediction("Waiting"), 2000);
+      }
+    }, 1500);
+  };
+
+  const stopDemoMode = () => {
+    if (demoIntervalRef.current) {
+      clearInterval(demoIntervalRef.current);
+      demoIntervalRef.current = null;
+    }
+  };
+
+  // --- Real Camera Logic ---
   const createHandLandmarker = async () => {
     try {
-      setPrediction("Loading Models...");
       const vision = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
       );
-
-      // Nhận diện tối đa 2 tay
       handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
         baseOptions: {
           modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
@@ -47,6 +73,7 @@ const Home = () => {
       renderLoop();
     } catch (err) {
       console.error("Model load failed:", err);
+      setPrediction("Model load failed");
     }
   };
 
@@ -55,7 +82,6 @@ const Home = () => {
     const counts = {};
     let maxCount = 0;
     let mostFrequent = "Analyzing...";
-
     for (const gesture of historyArray) {
       counts[gesture] = (counts[gesture] || 0) + 1;
       if (counts[gesture] > maxCount) {
@@ -66,7 +92,6 @@ const Home = () => {
     return { mostFrequent, counts };
   };
 
-  // --- Hàm kiểm tra quỹ đạo chữ J ---
   const isDrawingJCurve = (pathArray) => {
     if (pathArray.length < 15) return false;
     const startPoint = pathArray[0];
@@ -77,7 +102,6 @@ const Home = () => {
     return (deltaY > THRESHOLD && deltaX > THRESHOLD);
   };
 
-  // --- Hàm kiểm tra quỹ đạo chữ Z ---
   const isDrawingZCurve = (pathArray) => {
     if (pathArray.length < 15) return false;
     let directionChanges = 0;
@@ -105,9 +129,7 @@ const Home = () => {
 
       let handDetected = false;
       let fingerposeGesture = "None";
-      let isNearCheek = false;
 
-      // --- 1. DETECTION LOGIC ---
       if (results.landmarks && results.landmarks.length > 0 && results.landmarks[0]) {
         handDetected = true;
         const transformedLandmarks = results.landmarks[0].map(l => [l.x, l.y, l.z]);
@@ -131,7 +153,6 @@ const Home = () => {
         }
       }
 
-      // --- 2. VOTING BUFFER & MOTION TRACKING ---
       if (handDetected) {
         gestureHistoryRef.current.push(fingerposeGesture);
         if (gestureHistoryRef.current.length > BUFFER_SIZE) gestureHistoryRef.current.shift();
@@ -148,12 +169,12 @@ const Home = () => {
         setPrediction(mostFrequent);
         setVoteStats(counts);
 
-        // Auto-confirm letter after ~1s of sustained high confidence
         const conf = counts[mostFrequent] ? (counts[mostFrequent] / BUFFER_SIZE) : 0;
         if (mostFrequent.length === 1 && conf >= 0.7) {
           stableCountRef.current++;
-          if (stableCountRef.current >= 60) {
+          if (stableCountRef.current >= 90) {
             setTranslatedText(prev => prev + mostFrequent);
+            setLetterHistory(prev => [...prev, mostFrequent]);
             stableCountRef.current = 0;
             gestureHistoryRef.current = [];
           }
@@ -170,7 +191,6 @@ const Home = () => {
         setVoteStats({});
       }
 
-      // --- 3. DRAWING LOGIC ---
       if (canvasRef.current) {
         const canvasCtx = canvasRef.current.getContext("2d");
         const drawingUtils = new DrawingUtils(canvasCtx);
@@ -195,134 +215,255 @@ const Home = () => {
     requestAnimationFrame(renderLoop);
   };
 
+  const handleStartCamera = () => {
+    if (demoMode) {
+      // In demo mode, simulate detection
+      setCameraOn(true);
+      startDemoMode();
+    } else {
+      setCameraOn(true);
+      createHandLandmarker();
+    }
+  };
+
+  const handleStopCamera = () => {
+    setCameraOn(false);
+    stopDemoMode();
+    setPrediction("Waiting");
+    setVoteStats({});
+  };
+
+  const handleCopy = () => {
+    if (translatedText) {
+      navigator.clipboard.writeText(translatedText);
+    }
+  };
+
+  const handleDownload = () => {
+    if (!translatedText) return;
+    const blob = new Blob([translatedText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'asl-translation.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleClearAll = () => {
+    setTranslatedText('');
+    setLetterHistory([]);
+  };
+
   useEffect(() => {
-    createHandLandmarker();
+    return () => stopDemoMode();
   }, []);
 
-  // Determine status label
-  const isDetecting = prediction !== "Waiting" && prediction !== "No Hand Detected";
-  const confidence = isDetecting
-    ? Math.round(bestScoreRef.current * 10)
-    : 0;
-  const statusClass = prediction === "No Hand Detected"
-    ? "status-none"
-    : prediction === "Waiting"
-      ? "status-waiting"
-      : "status-active";
-
   return (
-    <div className="home-page">
+    <div className="translator-page">
       {/* Header */}
-      <div className="home-header">
-        <div className="home-header-badge">Live Detection</div>
-        <h1 className="home-title">ASL Recognition</h1>
-        <p className="home-subtitle">
-          Position your hand in front of the camera. The AI will detect your sign in real time.
+      <header className="translator-header">
+        <h1 className="translator-title">ASL to English Translator</h1>
+        <p className="translator-subtitle">
+          Real-time American Sign Language translation using your camera
         </p>
+      </header>
+
+      {/* Info Banner */}
+      <div className="translator-banner">
+        <div className="banner-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="10" r="9" stroke="#3B82F6" strokeWidth="2"/>
+            <text x="10" y="14.5" textAnchor="middle" fill="#3B82F6" fontSize="13" fontWeight="700" fontFamily="Inter, sans-serif">i</text>
+          </svg>
+        </div>
+        <div className="banner-text">
+          <strong>Demo Mode</strong>
+          <br />
+          This is a demonstration interface. Real ASL recognition requires machine learning models
+          (such as TensorFlow.js with hand-pose detection) or external APIs. The current version
+          shows mock detections to demonstrate the user experience.
+        </div>
       </div>
 
-      {/* Main content */}
-      <div className="home-content">
-
-        {/* Camera block */}
-        <div className="camera-wrapper">
-          {/* Glow ring */}
-          <div className={`camera-glow ${isDetecting ? 'glow-active' : ''}`} />
-
-          <div className="camera-container">
-            <Webcam
-              ref={webcamRef}
-              mirrored={true}
-              className="camera-feed"
-            />
-            <canvas
-              ref={canvasRef}
-              width="640"
-              height="480"
-              className="camera-canvas"
-            />
-
-            {/* Prediction badge */}
-            <div className={`prediction-badge ${statusClass}`}>
-              <span className="prediction-letter">{prediction}</span>
+      {/* Main 2-Column Grid */}
+      <div className="translator-grid">
+        {/* Left Column */}
+        <div className="translator-left">
+          {/* Block A: Camera Feed */}
+          <div className="card camera-card">
+            <div className="card-header">
+              <h2 className="card-title">Camera Feed</h2>
+              <div className="card-actions">
+                <button
+                  className={`btn btn-demo ${demoMode ? 'active' : ''}`}
+                  onClick={() => setDemoMode(!demoMode)}
+                >
+                  <svg className="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 1l1.796 3.64L14 5.42l-3 2.923.708 4.127L8 10.56l-3.708 1.91L5 8.343 2 5.42l4.204-.78L8 1z" fill="currentColor"/>
+                  </svg>
+                  Demo Mode
+                </button>
+                {!cameraOn ? (
+                  <button className="btn btn-start" onClick={handleStartCamera}>
+                    <svg className="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="23 7 16 12 23 17 23 7"/>
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    </svg>
+                    Start Camera
+                  </button>
+                ) : (
+                  <button className="btn btn-stop" onClick={handleStopCamera}>
+                    <svg className="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    </svg>
+                    Stop Camera
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Corner decorations */}
-            <div className="corner corner-tl" />
-            <div className="corner corner-tr" />
-            <div className="corner corner-bl" />
-            <div className="corner corner-br" />
-          </div>
-
-          {/* Status pill */}
-          <div className={`camera-status-pill ${statusClass}`}>
-            <span className="status-dot" />
-            {prediction === "No Hand Detected"
-              ? "No hand in frame"
-              : prediction === "Waiting"
-                ? "Initializing model…"
-                : `Detected: ${prediction}`}
-          </div>
-        </div>
-
-        {/* Sidebar stats */}
-        <div className="stats-panel">
-          <div className="stats-header">
-            <span className="stats-icon">🔤</span>
-            <div>
-              <div className="stats-title">Recognition</div>
-              <div className="stats-subtitle">Real-time detection</div>
-            </div>
-          </div>
-
-          <div className="stats-divider" />
-
-          {/* Detected letter + confidence */}
-          <div className="recognition-box">
-            {isDetecting ? (
-              <>
-                <span className="recognition-letter">{prediction}</span>
-                <span className="recognition-confidence">{confidence}%</span>
-              </>
-            ) : (
-              <span className="recognition-placeholder">
-                {prediction === "Waiting" ? "Initializing…" : "Show your hand 👋"}
-              </span>
-            )}
-          </div>
-
-          {isDetecting && (
-            <div className="recognition-bar-track">
-              <div
-                className="recognition-bar-fill"
-                style={{ width: `${confidence}%` }}
-              />
-            </div>
-          )}
-
-          <div className="stats-divider" />
-
-          {/* Translated text */}
-          <div className="translated-section">
-            <div className="translated-label">📝 Translated Text</div>
-            <div className="translated-box">
-              {translatedText ? (
-                <span className="translated-text">{translatedText}</span>
+            {/* Video Area */}
+            <div className="camera-viewport">
+              {cameraOn && !demoMode ? (
+                <>
+                  <Webcam
+                    ref={webcamRef}
+                    mirrored={true}
+                    className="camera-video"
+                  />
+                  <canvas
+                    ref={canvasRef}
+                    width="640"
+                    height="480"
+                    className="camera-overlay-canvas"
+                  />
+                  {/* Live prediction overlay */}
+                  {prediction && prediction !== "Waiting" && prediction !== "No Hand Detected" && (
+                    <div className="live-prediction-badge">
+                      {prediction}
+                    </div>
+                  )}
+                </>
+              ) : cameraOn && demoMode ? (
+                <div className="camera-demo-active">
+                  <div className="demo-pulse-ring"></div>
+                  <div className="demo-prediction-display">
+                    <span className="demo-letter">{prediction !== "Waiting" ? prediction : "..."}</span>
+                  </div>
+                  <p className="demo-status-text">Demo detection running...</p>
+                </div>
               ) : (
-                <span className="translated-placeholder">Letters will appear here…</span>
+                <div className="camera-off-state">
+                  <div className="camera-off-icon">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                      <circle cx="24" cy="24" r="22" stroke="#475569" strokeWidth="2" strokeDasharray="4 4"/>
+                      <text x="24" y="30" textAnchor="middle" fill="#94A3B8" fontSize="24" fontWeight="700" fontFamily="Inter, sans-serif">!</text>
+                    </svg>
+                  </div>
+                  <p className="camera-off-title">Camera is off</p>
+                  <p className="camera-off-sub">Click 'Start Camera' to begin</p>
+                </div>
               )}
             </div>
-            {translatedText && (
-              <div className="translated-actions">
-                <button className="translated-clear" onClick={() => setTranslatedText('')}>
-                  Clear
+
+            {/* Footer Tip */}
+            <div className="camera-tip">
+              <span className="tip-icon">💡</span>
+              <span className="tip-text">
+                For production use, integrate TensorFlow.js with MediaPipe Hands or Google's ML Kit
+              </span>
+            </div>
+          </div>
+
+          {/* Block B: How to Use */}
+          <div className="card how-to-card">
+            <h2 className="card-title">How to Use</h2>
+            <ol className="how-to-list">
+              <li>
+                <span className="step-number">1</span>
+                <span className="step-text">Click "Start Camera" to enable your webcam</span>
+              </li>
+              <li>
+                <span className="step-number">2</span>
+                <span className="step-text">Position your hand clearly in front of the camera</span>
+              </li>
+              <li>
+                <span className="step-number">3</span>
+                <span className="step-text">Form ASL letters and words</span>
+              </li>
+              <li>
+                <span className="step-number">4</span>
+                <span className="step-text">Watch the translation appear in real-time</span>
+              </li>
+            </ol>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="translator-right">
+          {/* Block C: Translation */}
+          <div className="card translation-card">
+            <div className="translation-header">
+              <h2 className="card-title">Translation</h2>
+              <div className="translation-actions">
+                {/* Copy */}
+                <button className="action-btn" onClick={handleCopy} title="Copy to clipboard">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                </button>
+                {/* Download */}
+                <button className="action-btn" onClick={handleDownload} title="Download as text">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </button>
+                {/* Delete/Clear */}
+                <button className="action-btn action-btn-danger" onClick={handleClearAll} title="Clear all">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
                 </button>
               </div>
-            )}
+            </div>
+
+            <div className="translation-content">
+              {/* Main Output Box */}
+              <div className="translation-output-box">
+                {translatedText ? (
+                  <p className="translated-output">{translatedText.split('').join(' ')}</p>
+                ) : (
+                  <div className="translation-empty">
+                    <svg className="empty-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <p className="empty-title">No translation yet</p>
+                    <p className="empty-sub">Detected signs will appear here</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Word History */}
+              {letterHistory.length > 0 && (
+                <div className="word-history">
+                  <div className="word-history-divider"></div>
+                  <p className="word-history-title">Word History</p>
+                  <div className="word-history-badges">
+                    {letterHistory.map((letter, index) => (
+                      <span key={index} className="history-badge">{letter}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 };

@@ -1,118 +1,328 @@
-import React, { useRef, useEffect , useState} from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Webcam from 'react-webcam';
 import { FilesetResolver, HandLandmarker, DrawingUtils } from '@mediapipe/tasks-vision';
-import { detectASL } from '../utils/aslLogic';
 import * as fp from "fingerpose";
 import ASLAlphabet from "../utils/index";
+import '../styles/Home.css';
 
+// Khởi tạo GestureEstimator 1 lần duy nhất
+const GE = new fp.GestureEstimator(ASLAlphabet);
 
 const Home = () => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
-  let handLandmarker = undefined;
-  const [prediction, setPrediction] = useState("Waiting");
 
-  // 1. Load the MediaPipe Model
+  const handLandmarkerRef = useRef(null);
+
+  const [prediction, setPrediction] = useState("Waiting");
+  const [voteStats, setVoteStats] = useState({});
+  const [translatedText, setTranslatedText] = useState('');
+
+  const gestureHistoryRef = useRef([]);
+
+  // --- Mảng lưu tọa độ quỹ đạo ngón tay ---
+  const pinkyPathRef = useRef([]); // Lưu tọa độ ngón út (cho chữ J)
+  const indexPathRef = useRef([]); // Lưu tọa độ ngón trỏ (cho chữ Z)
+  const stableCountRef = useRef(0);
+  const bestScoreRef = useRef(0);
+
+  const BUFFER_SIZE = 30; // ~1 giây quét
+
   const createHandLandmarker = async () => {
-    const vision = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-    );
-    handLandmarker = await HandLandmarker.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
-        delegate: "GPU"
-      },
-      runningMode: "VIDEO",
-      numHands: 2
-    });
-    renderLoop();
+    try {
+      setPrediction("Loading Models...");
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+      );
+
+      // Nhận diện tối đa 2 tay
+      handLandmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numHands: 1
+      });
+      renderLoop();
+    } catch (err) {
+      console.error("Model load failed:", err);
+    }
   };
 
-  // 2. The Animation Loop (Detects hand every frame)
-  const renderLoop = async () => {
-  if (webcamRef.current && webcamRef.current.video.readyState === 4) {
-    const video = webcamRef.current.video;
-    const results = await handLandmarker.detectForVideo(video, performance.now());
+  const getMostFrequentGesture = (historyArray) => {
+    if (historyArray.length === 0) return { mostFrequent: "Analyzing...", counts: {} };
+    const counts = {};
+    let maxCount = 0;
+    let mostFrequent = "Analyzing...";
 
-    // --- 1. THE AI DETECTION LOGIC ---
-if (results.landmarks && results.landmarks.length > 0 && results.landmarks[0]) {
-  
-  // Transform landmarks for fingerpose: [[x,y,z], [x,y,z]...]
-  // We use results.landmarks[0] for the first hand found
-  const transformedLandmarks = results.landmarks[0].map(l => [l.x, l.y, l.z]);
-
-  // IMPORTANT: Ensure the array has exactly 21 points before estimating
-  if (transformedLandmarks.length === 21) {
-    const GE = new fp.GestureEstimator(ASLAlphabet);
-    
-    // Estimate needs the landmarks array and a confidence threshold
-    const gesture = await GE.estimate(transformedLandmarks, 8.0);
-
-    if (gesture.gestures && gesture.gestures.length > 0) {
-      const confidence = gesture.gestures.map((p) => p.score);
-      const maxConfidence = confidence.indexOf(Math.max(...confidence));
-      const result = gesture.gestures[maxConfidence].name;
-      setPrediction(result); 
-    } else {
-      setPrediction("Analyzing...");
-    }
-  }
-} else {
-  setPrediction("No Hand Detected");
-}
-
-    // --- 2. THE DRAWING LOGIC ---
-    const canvasCtx = canvasRef.current.getContext("2d");
-    const drawingUtils = new DrawingUtils(canvasCtx);
-    
-    canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    canvasCtx.save();
-    canvasCtx.translate(canvasRef.current.width, 0);
-    canvasCtx.scale(-1, 1);
-
-    if (results.landmarks && results.landmarks.length > 0) {
-      for (const landmarks of results.landmarks) {
-        drawingUtils.drawConnectors(landmarks, HandLandmarker.HAND_CONNECTIONS, {
-          color: "#00FF00",
-          lineWidth: 5
-        });
-        drawingUtils.drawLandmarks(landmarks, { color: "#FF0000", lineWidth: 2 });
+    for (const gesture of historyArray) {
+      counts[gesture] = (counts[gesture] || 0) + 1;
+      if (counts[gesture] > maxCount) {
+        maxCount = counts[gesture];
+        mostFrequent = gesture;
       }
     }
-    
-    canvasCtx.restore();
-  }
-  requestAnimationFrame(renderLoop);
-};
+    return { mostFrequent, counts };
+  };
+
+  // --- Hàm kiểm tra quỹ đạo chữ J ---
+  const isDrawingJCurve = (pathArray) => {
+    if (pathArray.length < 15) return false;
+    const startPoint = pathArray[0];
+    const endPoint = pathArray[pathArray.length - 1];
+    const deltaY = endPoint.y - startPoint.y;
+    const deltaX = Math.abs(endPoint.x - startPoint.x);
+    const THRESHOLD = 0.05;
+    return (deltaY > THRESHOLD && deltaX > THRESHOLD);
+  };
+
+  // --- Hàm kiểm tra quỹ đạo chữ Z ---
+  const isDrawingZCurve = (pathArray) => {
+    if (pathArray.length < 15) return false;
+    let directionChanges = 0;
+    let lastSign = 0;
+    for (let i = 1; i < pathArray.length; i++) {
+      let dx = pathArray[i].x - pathArray[i - 1].x;
+      if (Math.abs(dx) > 0.005) {
+        let sign = Math.sign(dx);
+        if (lastSign !== 0 && sign !== lastSign) directionChanges++;
+        lastSign = sign;
+      }
+    }
+    return directionChanges >= 2;
+  };
+
+  const renderLoop = async () => {
+    if (
+      webcamRef.current &&
+      webcamRef.current.video &&
+      webcamRef.current.video.readyState === 4 &&
+      handLandmarkerRef.current
+    ) {
+      const video = webcamRef.current.video;
+      const results = await handLandmarkerRef.current.detectForVideo(video, performance.now());
+
+      let handDetected = false;
+      let fingerposeGesture = "None";
+      let isNearCheek = false;
+
+      // --- 1. DETECTION LOGIC ---
+      if (results.landmarks && results.landmarks.length > 0 && results.landmarks[0]) {
+        handDetected = true;
+        const transformedLandmarks = results.landmarks[0].map(l => [l.x, l.y, l.z]);
+        const pinkyTip = results.landmarks[0][20];
+        const indexTip = results.landmarks[0][8];
+
+        pinkyPathRef.current.push({ x: pinkyTip.x, y: pinkyTip.y });
+        indexPathRef.current.push({ x: indexTip.x, y: indexTip.y });
+
+        if (pinkyPathRef.current.length > BUFFER_SIZE) pinkyPathRef.current.shift();
+        if (indexPathRef.current.length > BUFFER_SIZE) indexPathRef.current.shift();
+
+        if (transformedLandmarks.length === 21) {
+          const gesture = GE.estimate(transformedLandmarks, 8.5);
+          if (gesture.gestures && gesture.gestures.length > 0) {
+            const confidence = gesture.gestures.map((p) => p.score);
+            const maxConfidence = confidence.indexOf(Math.max(...confidence));
+            fingerposeGesture = gesture.gestures[maxConfidence].name;
+            bestScoreRef.current = gesture.gestures[maxConfidence].score;
+          }
+        }
+      }
+
+      // --- 2. VOTING BUFFER & MOTION TRACKING ---
+      if (handDetected) {
+        gestureHistoryRef.current.push(fingerposeGesture);
+        if (gestureHistoryRef.current.length > BUFFER_SIZE) gestureHistoryRef.current.shift();
+
+        let { mostFrequent, counts } = getMostFrequentGesture(gestureHistoryRef.current);
+
+        if (mostFrequent === 'J' || mostFrequent === 'I') {
+          mostFrequent = isDrawingJCurve(pinkyPathRef.current) ? "J" : "I";
+        }
+        if (mostFrequent === 'Z' || mostFrequent === 'D') {
+          mostFrequent = isDrawingZCurve(indexPathRef.current) ? "Z" : "D";
+        }
+
+        setPrediction(mostFrequent);
+        setVoteStats(counts);
+
+        // Auto-confirm letter after ~1s of sustained high confidence
+        const conf = counts[mostFrequent] ? (counts[mostFrequent] / BUFFER_SIZE) : 0;
+        if (mostFrequent.length === 1 && conf >= 0.7) {
+          stableCountRef.current++;
+          if (stableCountRef.current >= 60) {
+            setTranslatedText(prev => prev + mostFrequent);
+            stableCountRef.current = 0;
+            gestureHistoryRef.current = [];
+          }
+        } else {
+          stableCountRef.current = 0;
+        }
+      } else {
+        if (gestureHistoryRef.current.length > 0) gestureHistoryRef.current.shift();
+        pinkyPathRef.current = [];
+        indexPathRef.current = [];
+        stableCountRef.current = 0;
+        bestScoreRef.current = 0;
+        setPrediction("No Hand Detected");
+        setVoteStats({});
+      }
+
+      // --- 3. DRAWING LOGIC ---
+      if (canvasRef.current) {
+        const canvasCtx = canvasRef.current.getContext("2d");
+        const drawingUtils = new DrawingUtils(canvasCtx);
+        canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        canvasCtx.save();
+        canvasCtx.translate(canvasRef.current.width, 0);
+        canvasCtx.scale(-1, 1);
+
+        if (results.landmarks && results.landmarks.length > 0) {
+          for (const landmarks of results.landmarks) {
+            drawingUtils.drawConnectors(landmarks, HandLandmarker.HAND_CONNECTIONS, {
+              color: "#00FF00",
+              lineWidth: 5
+            });
+            drawingUtils.drawLandmarks(landmarks, { color: "#FF0000", lineWidth: 2 });
+          }
+        }
+        canvasCtx.restore();
+      }
+    }
+
+    requestAnimationFrame(renderLoop);
+  };
 
   useEffect(() => {
     createHandLandmarker();
   }, []);
 
-  return (
-    <div style={{ position: 'relative', width: '640px', margin: 'auto' }}>
-      {/* 1. The Video Layer */}
-      <Webcam ref={webcamRef} mirrored={true} style={{ width: '640px', height: '480px', borderRadius: '10px' }} />
-      
-      {/* 2. The Skeleton Layer */}
-      <canvas ref={canvasRef} width="640" height="480" style={{ position: 'absolute', top: 0, left: 0 }} />
+  // Determine status label
+  const isDetecting = prediction !== "Waiting" && prediction !== "No Hand Detected";
+  const confidence = isDetecting
+    ? Math.round(bestScoreRef.current * 10)
+    : 0;
+  const statusClass = prediction === "No Hand Detected"
+    ? "status-none"
+    : prediction === "Waiting"
+      ? "status-waiting"
+      : "status-active";
 
-      {/* 3. The Prediction Overlay */}
-      <div style={{
-        position: 'absolute',
-        bottom: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        color: 'white',
-        padding: '10px 40px',
-        borderRadius: '50px',
-        fontSize: '2rem',
-        fontWeight: 'bold',
-        border: '2px solid #00FF00'
-      }}>
-        {prediction}
+  return (
+    <div className="home-page">
+      {/* Header */}
+      <div className="home-header">
+        <div className="home-header-badge">Live Detection</div>
+        <h1 className="home-title">ASL Recognition</h1>
+        <p className="home-subtitle">
+          Position your hand in front of the camera. The AI will detect your sign in real time.
+        </p>
       </div>
+
+      {/* Main content */}
+      <div className="home-content">
+
+        {/* Camera block */}
+        <div className="camera-wrapper">
+          {/* Glow ring */}
+          <div className={`camera-glow ${isDetecting ? 'glow-active' : ''}`} />
+
+          <div className="camera-container">
+            <Webcam
+              ref={webcamRef}
+              mirrored={true}
+              className="camera-feed"
+            />
+            <canvas
+              ref={canvasRef}
+              width="640"
+              height="480"
+              className="camera-canvas"
+            />
+
+            {/* Prediction badge */}
+            <div className={`prediction-badge ${statusClass}`}>
+              <span className="prediction-letter">{prediction}</span>
+            </div>
+
+            {/* Corner decorations */}
+            <div className="corner corner-tl" />
+            <div className="corner corner-tr" />
+            <div className="corner corner-bl" />
+            <div className="corner corner-br" />
+          </div>
+
+          {/* Status pill */}
+          <div className={`camera-status-pill ${statusClass}`}>
+            <span className="status-dot" />
+            {prediction === "No Hand Detected"
+              ? "No hand in frame"
+              : prediction === "Waiting"
+                ? "Initializing model…"
+                : `Detected: ${prediction}`}
+          </div>
+        </div>
+
+        {/* Sidebar stats */}
+        <div className="stats-panel">
+          <div className="stats-header">
+            <span className="stats-icon">🔤</span>
+            <div>
+              <div className="stats-title">Recognition</div>
+              <div className="stats-subtitle">Real-time detection</div>
+            </div>
+          </div>
+
+          <div className="stats-divider" />
+
+          {/* Detected letter + confidence */}
+          <div className="recognition-box">
+            {isDetecting ? (
+              <>
+                <span className="recognition-letter">{prediction}</span>
+                <span className="recognition-confidence">{confidence}%</span>
+              </>
+            ) : (
+              <span className="recognition-placeholder">
+                {prediction === "Waiting" ? "Initializing…" : "Show your hand 👋"}
+              </span>
+            )}
+          </div>
+
+          {isDetecting && (
+            <div className="recognition-bar-track">
+              <div
+                className="recognition-bar-fill"
+                style={{ width: `${confidence}%` }}
+              />
+            </div>
+          )}
+
+          <div className="stats-divider" />
+
+          {/* Translated text */}
+          <div className="translated-section">
+            <div className="translated-label">📝 Translated Text</div>
+            <div className="translated-box">
+              {translatedText ? (
+                <span className="translated-text">{translatedText}</span>
+              ) : (
+                <span className="translated-placeholder">Letters will appear here…</span>
+              )}
+            </div>
+            {translatedText && (
+              <div className="translated-actions">
+                <button className="translated-clear" onClick={() => setTranslatedText('')}>
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 };
