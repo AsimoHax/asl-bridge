@@ -135,7 +135,8 @@ const LearnSigns = () => {
   const [sourcePhrase, setSourcePhrase] = useState('HELLO');
   const [targetWord, setTargetWord] = useState('HELLO');
   const [selectedLetter, setSelectedLetter] = useState('');
-  const [completedLetters, setCompletedLetters] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(null);
+  const [completedIndices, setCompletedIndices] = useState([]);
   const [showReference, setShowReference] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState('Awaiting...');
@@ -303,6 +304,11 @@ const LearnSigns = () => {
     return word.split('').find((char) => char !== ' ') || '';
   };
 
+  const getFirstValidLetterIndex = (word) => {
+    const index = word.split('').findIndex((char) => char !== ' ');
+    return index === -1 ? null : index;
+  };
+
   const handleLanguageChange = (event) => {
     setSelectedLanguage(event.target.value);
   };
@@ -311,9 +317,10 @@ const LearnSigns = () => {
     setSourcePhrase(event.target.value);
   };
 
-  const handleLetterClick = (letter) => {
+  const handleLetterClick = (letter, index) => {
     if (letter === ' ') return;
     setSelectedLetter(letter);
+    setSelectedIndex(index);
     setShowReference(false);
     setIsTesting(false);
     setTestStatus('Awaiting...');
@@ -368,22 +375,23 @@ const LearnSigns = () => {
   }, [selectedLanguage, sourcePhrase]);
 
   useEffect(() => {
-    setCompletedLetters([]);
+    setCompletedIndices([]);
     setSelectedLetter(getFirstValidLetter(targetWord));
+    setSelectedIndex(getFirstValidLetterIndex(targetWord));
     setShowReference(false);
     setIsTesting(false);
     setTestStatus('Awaiting...');
   }, [targetWord]);
 
   useEffect(() => {
-    if (!isTesting || !selectedLetter || !prediction) return;
+    if (!isTesting || selectedIndex === null || !selectedLetter || !prediction) return;
     if (prediction === selectedLetter) {
       setTestStatus('Correct');
-      setCompletedLetters((prev) => prev.includes(selectedLetter) ? prev : [...prev, selectedLetter]);
+      setCompletedIndices((prev) => prev.includes(selectedIndex) ? prev : [...prev, selectedIndex]);
     } else {
       setTestStatus('Awaiting...');
     }
-  }, [prediction, isTesting, selectedLetter]);
+  }, [prediction, isTesting, selectedLetter, selectedIndex]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -395,7 +403,7 @@ const LearnSigns = () => {
   const wordLetters = targetWord.split('');
   const visibleLetters = wordLetters.filter((char) => char !== ' ');
   const totalLetters = visibleLetters.length;
-  const isWordComplete = completedLetters.length === totalLetters;
+  const isWordComplete = completedIndices.length === totalLetters;
 
   return (
     <div className="learn-page">
@@ -498,13 +506,13 @@ const LearnSigns = () => {
             <div className="learn-progress-track">
               <div
                 className="learn-progress-fill"
-                style={{ width: `${(completedLetters.length / Math.max(totalLetters, 1)) * 100}%` }}
+                style={{ width: `${(completedIndices.length / Math.max(totalLetters, 1)) * 100}%` }}
               />
             </div>
             <p className="learn-progress-text">
               {isWordComplete
                 ? '🎉 Word complete!'
-                : `${completedLetters.length} / ${totalLetters} letters`
+                : `${completedIndices.length} / ${totalLetters} letters`
               }
             </p>
           </div>
@@ -524,15 +532,15 @@ const LearnSigns = () => {
                   if (letter === ' ') {
                     return <div key={idx} className="speller-gap" />;
                   }
-                  const isCompleted = visibleIndex < completedLetters.length;
-                  const isActive = letter === selectedLetter && !isCompleted;
-                  const isNext = visibleIndex === completedLetters.length;
+                  const isCompleted = completedIndices.includes(visibleIndex);
+                  const isActive = letter === selectedLetter && visibleIndex === selectedIndex && !isCompleted;
+                  const isNext = visibleIndex === completedIndices.length;
                   visibleIndex += 1;
                   return (
                     <button
                       key={idx}
                       className={`speller-letter ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''} ${isNext ? 'next' : ''}`}
-                      onClick={() => handleLetterClick(letter)}
+                      onClick={() => handleLetterClick(letter, visibleIndex)}
                     >
                       {letter}
                     </button>

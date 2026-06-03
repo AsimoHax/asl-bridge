@@ -1,50 +1,30 @@
-import {Finger, FingerCurl, FingerDirection, GestureDescription} from 'fingerpose';
+import { Finger, FingerCurl, FingerDirection, GestureDescription } from 'fingerpose';
 
 export const oSign = new GestureDescription('O');
-// [
-//     [
-//       "Thumb",
-//       "No Curl",
-//       "Diagonal Up Right"
-//     ],
-//     [
-//       "Index",
-//       "Half Curl",
-//       "Diagonal Up Right"
-//     ],
-//     [
-//       "Middle",
-//       "Half Curl",
-//       "Diagonal Up Right"
-//     ],
-//     [
-//       "Ring",
-//       "Half Curl",
-//       "Diagonal Up Right"
-//     ],
-//     [
-//       "Pinky",
-//       "Half Curl",
-//       "Diagonal Up Right"
-//     ]
-//   ]
 
-//Thumb
-oSign.addCurl(Finger.Thumb, FingerCurl.NoCurl, 1.0);
-oSign.addDirection(Finger.Index, FingerDirection.DiagonalUpRight, 0.70);
+// ==========================================
+// THUMB: Curved inward to lock the circle
+// ==========================================
+// In a true 'O', the thumb bends at the knuckle. Forcing NoCurl makes it a 'C'.
+oSign.addCurl(Finger.Thumb, FingerCurl.HalfCurl, 1.0);
+oSign.addCurl(Finger.Thumb, FingerCurl.NoCurl, 0.7); // Fallback for flat hands
 
-//Index
-oSign.addCurl(Finger.Index, FingerCurl.HalfCurl, 1);
-oSign.addDirection(Finger.Index, FingerDirection.DiagonalUpRight, 0.70);
+// Fixed typo: targeting Finger.Thumb.
+oSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpRight, 0.8);
+oSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpLeft, 0.8);
+oSign.addDirection(Finger.Thumb, FingerDirection.VerticalUp, 0.8);
 
-//Middle
-oSign.addCurl(Finger.Middle, FingerCurl.HalfCurl, 1);
-oSign.addDirection(Finger.Middle, FingerDirection.DiagonalUpRight, 0.70);
-
-//Ring
-oSign.addCurl(Finger.Ring, FingerCurl.FullCurl, 1);
-oSign.addDirection(Finger.Ring, FingerDirection.DiagonalUpRight, 0.70);
-
-//Pinky
-oSign.addCurl(Finger.Pinky, FingerCurl.FullCurl, 1);
-oSign.addDirection(Finger.Pinky, FingerDirection.DiagonalUpRight, 0.70);
+// ==========================================
+// THE FOUR FINGERS: Creating a uniform curve
+// ==========================================
+// Every finger must be curved to meet the thumb. MediaPipe will jump between 
+// Half and Full curl depending on your hand angle, so we accept both.
+for (const finger of [Finger.Index, Finger.Middle, Finger.Ring, Finger.Pinky]) {
+    oSign.addCurl(finger, FingerCurl.HalfCurl, 1.0);
+    oSign.addCurl(finger, FingerCurl.FullCurl, 0.85);
+    
+    // Give them wide directional tolerances so tilting the hand doesn't break the 'O'
+    oSign.addDirection(finger, FingerDirection.DiagonalUpRight, 0.8);
+    oSign.addDirection(finger, FingerDirection.DiagonalUpLeft, 0.8);
+    oSign.addDirection(finger, FingerDirection.VerticalUp, 0.8);
+}

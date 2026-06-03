@@ -1,51 +1,37 @@
-import {Finger, FingerCurl, FingerDirection, GestureDescription} from 'fingerpose';
+import { Finger, FingerCurl, FingerDirection, GestureDescription } from 'fingerpose';
 
 export const lSign = new GestureDescription('L');
-// [
-//     [
-//       "Thumb",
-//       "No Curl",
-//       "Diagonal Up Right"
-//     ],
-//     [
-//       "Index",
-//       "No Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Middle",
-//       "Full Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Ring",
-//       "Full Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Pinky",
-//       "Full Curl",
-//       "Vertical Up"
-//     ]
-//   ]
 
-//Thumb
+// ==========================================
+// THUMB: Completely open, sticking straight out (90 degrees)
+// ==========================================
 lSign.addCurl(Finger.Thumb, FingerCurl.NoCurl, 1.0);
-lSign.addDirection(Finger.Index, FingerDirection.DiagonalUpRight, 0.70);
 
-//Index
-lSign.addCurl(Finger.Index, FingerCurl.NoCurl, 1);
-lSign.addDirection(Finger.Index, FingerDirection.VerticalUp, 0.70);
+// Crucial Change: The thumb must point sideways, not up!
+// This explicitly prevents it from overlapping with the tucked 'D' thumb.
+lSign.addDirection(Finger.Thumb, FingerDirection.HorizontalRight, 1.0);
+lSign.addDirection(Finger.Thumb, FingerDirection.HorizontalLeft, 1.0);
 
-//Middle
-lSign.addCurl(Finger.Middle, FingerCurl.FullCurl, 1);
-lSign.addDirection(Finger.Middle, FingerDirection.VerticalUp, 0.70);
+// Optional: Keep diagonals with a lower confidence just in case of lazy signing
+lSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpRight, 0.6);
+lSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpLeft, 0.6);
 
-//Ring
-lSign.addCurl(Finger.Ring, FingerCurl.FullCurl, 1);
-lSign.addDirection(Finger.Ring, FingerDirection.VerticalUp, 0.70);
+// ==========================================
+// INDEX FINGER: Sticking straight up
+// ==========================================
+lSign.addCurl(Finger.Index, FingerCurl.NoCurl, 1.0);
+lSign.addDirection(Finger.Index, FingerDirection.VerticalUp, 1.0);
+lSign.addDirection(Finger.Index, FingerDirection.DiagonalUpRight, 0.7);
+lSign.addDirection(Finger.Index, FingerDirection.DiagonalUpLeft, 0.7);
 
-//Pinky
-lSign.addCurl(Finger.Pinky, FingerCurl.FullCurl, 1);
-lSign.addDirection(Finger.Pinky, FingerDirection.VerticalUp, 0.70);
+// ==========================================
+// MIDDLE, RING, PINKY: Tightly balled into the palm
+// ==========================================
+lSign.addCurl(Finger.Middle, FingerCurl.FullCurl, 1.0);
+lSign.addCurl(Finger.Ring, FingerCurl.FullCurl, 1.0);
+lSign.addCurl(Finger.Pinky, FingerCurl.FullCurl, 1.0);
 
+// Keeping the stable fist vectors
+lSign.addDirection(Finger.Middle, FingerDirection.VerticalUp, 0.75);
+lSign.addDirection(Finger.Ring, FingerDirection.VerticalUp, 0.75);
+lSign.addDirection(Finger.Pinky, FingerDirection.VerticalUp, 0.75);

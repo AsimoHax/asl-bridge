@@ -1,51 +1,37 @@
-import {Finger, FingerCurl, FingerDirection, GestureDescription} from 'fingerpose';
+import { Finger, FingerCurl, FingerDirection, GestureDescription } from 'fingerpose';
 
 export const dSign = new GestureDescription('D');
-// [
-//     [
-//       "Thumb",
-//       "Half Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Index",
-//       "No Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Middle",
-//       "Full Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Ring",
-//       "Full Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Pinky",
-//       "Full Curl",
-//       "Vertical Up"
-//     ]
-//   ]
 
-//Thumb
-dSign.addCurl(Finger.Thumb, FingerCurl.HalfCurl, 1.0);
-dSign.addDirection(Finger.Index, FingerDirection.VerticalUp, 0.70);
+// ==========================================
+// INDEX FINGER: The "Pointer" (Must be perfectly straight)
+// ==========================================
+dSign.addCurl(Finger.Index, FingerCurl.NoCurl, 1.0);
+// Allow slight natural hand tilts so it doesn't drop detection
+dSign.addDirection(Finger.Index, FingerDirection.VerticalUp, 1.0);
+dSign.addDirection(Finger.Index, FingerDirection.DiagonalUpRight, 0.8);
+dSign.addDirection(Finger.Index, FingerDirection.DiagonalUpLeft, 0.8);
 
-//Index
-dSign.addCurl(Finger.Index, FingerCurl.NoCurl, 1);
-dSign.addDirection(Finger.Index, FingerDirection.VerticalUp, 0.70);
+// ==========================================
+// THUMB: Tucked inward touching the middle finger
+// ==========================================
+// MediaPipe can read this as Half or Full curl depending on hand size. We accept both.
+dSign.addCurl(Finger.Thumb, FingerCurl.HalfCurl, 0.9);
+dSign.addCurl(Finger.Thumb, FingerCurl.FullCurl, 0.8);
 
-//Middle
-dSign.addCurl(Finger.Middle, FingerCurl.FullCurl, 1);
-dSign.addDirection(Finger.Middle, FingerDirection.VerticalUp, 0.70);
+// Loosen thumb direction so it doesn't conflict with "L"
+dSign.addDirection(Finger.Thumb, FingerDirection.VerticalUp, 0.7);
+dSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpRight, 0.7);
+dSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpLeft, 0.7);
 
-//Ring
-dSign.addCurl(Finger.Ring, FingerCurl.FullCurl, 1);
-dSign.addDirection(Finger.Ring, FingerDirection.VerticalUp, 0.70);
+// ==========================================
+// MIDDLE, RING, PINKY: The Fist Base
+// ==========================================
+dSign.addCurl(Finger.Middle, FingerCurl.HalfCurl, 0.9);
+dSign.addCurl(Finger.Ring, FingerCurl.FullCurl, 1.0);
+dSign.addCurl(Finger.Pinky, FingerCurl.FullCurl, 1.0);
 
-//Pinky
-dSign.addCurl(Finger.Pinky, FingerCurl.FullCurl, 1);
-dSign.addDirection(Finger.Pinky, FingerDirection.VerticalUp, 0.70);
-
+// We keep VerticalUp here because, like the "A" sign, 
+// a tight fist vector reliably triggers this internal direction.
+//dSign.addDirection(Finger.Middle, FingerDirection.VerticalUp, 0.75);
+dSign.addDirection(Finger.Ring, FingerDirection.VerticalUp, 0.75);
+dSign.addDirection(Finger.Pinky, FingerDirection.VerticalUp, 0.75);

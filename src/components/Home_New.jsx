@@ -26,7 +26,7 @@ const Home = () => {
   const bestScoreRef = useRef(0);
 
   const BUFFER_SIZE = 30;
-  const FRAME_CONF = 60;
+  const FRAME_CONF = 30;
 
   // --- Real Camera Logic ---
   const createHandLandmarker = async () => {
