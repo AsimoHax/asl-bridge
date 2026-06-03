@@ -26,6 +26,7 @@ const Home = () => {
   const bestScoreRef = useRef(0);
 
   const BUFFER_SIZE = 30;
+  const FRAME_CONF = 60;
 
   // --- Real Camera Logic ---
   const createHandLandmarker = async () => {
@@ -143,7 +144,7 @@ const Home = () => {
         const conf = counts[mostFrequent] ? (counts[mostFrequent] / BUFFER_SIZE) : 0;
         if (mostFrequent.length === 1 && conf >= 0.7) {
           stableCountRef.current++;
-          if (stableCountRef.current >= 90) {
+          if (stableCountRef.current >= FRAME_CONF) {
             setTranslatedText(prev => prev + mostFrequent);
             setLetterHistory(prev => [...prev, mostFrequent]);
             stableCountRef.current = 0;

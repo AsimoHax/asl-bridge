@@ -177,6 +177,53 @@
   letter-spacing: -0.5px;
 }
 
+.learn-language-controls {
+  display: grid;
+  gap: 16px;
+}
+
+.learn-language-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.learn-language-field span {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.learn-language-field select,
+.learn-language-field input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #E2E8F0;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #0F172A;
+  background: #FFFFFF;
+}
+
+.learn-language-field input::placeholder {
+  color: #94A3B8;
+}
+
+.learn-word-translation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.learn-translation-error {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: #DC2626;
+}
+
 .btn-new-word {
   display: inline-flex;
   align-items: center;
@@ -307,6 +354,11 @@
   box-shadow: none;
 }
 
+.speller-gap {
+  width: 18px;
+  height: 48px;
+}
+
 @keyframes letterPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
   50% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
@@ -317,6 +369,47 @@
   font-size: 12px;
   color: #94A3B8;
   margin: 0;
+}
+
+.learn-speller-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 14px;
+}
+
+.btn-test {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid #3B82F6;
+  background: #3B82F6;
+  color: #FFFFFF;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-test:hover {
+  background: #2563EB;
+  transform: translateY(-1px);
+}
+
+.learn-test-status {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+
+.learn-test-status.correct {
+  color: #15803D;
 }
 
 /* ── Card 3: Reference Image ──────────────── */
@@ -331,6 +424,33 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.learn-reference-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-toggle-ref {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #0F172A;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-toggle-ref:hover {
+  background: #EEF2FF;
+  border-color: #CBD5E1;
 }
 
 .learn-reference-label {

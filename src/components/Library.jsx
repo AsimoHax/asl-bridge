@@ -287,7 +287,6 @@ export default function Library() {
           filtered.map((sign) => <SignCard key={sign.letter} sign={sign} />)
         ) : (
           <div className="library-empty">
-            <span className="library-empty-icon">🤷</span>
             <p>No signs found for "<strong>{search}</strong>"</p>
             <button className="library-reset-btn" onClick={() => setSearch('')}>
               Show all signs

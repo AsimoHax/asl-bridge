@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Webcam from 'react-webcam';
 import { FilesetResolver, HandLandmarker, DrawingUtils } from '@mediapipe/tasks-vision';
 import * as fp from "fingerpose";
@@ -40,11 +40,87 @@ const SIGN_IMAGES = {
   V: vImg, W: wImg, X: xImg, Y: yImg, Z: zImg,
 };
 
-const PRACTICE_WORDS = [
-  'APPLE', 'HELLO', 'WORLD', 'BRAVE', 'QUICK',
-  'SMART', 'DREAM', 'LIGHT', 'PEACE', 'SMILE',
-  'THANK', 'LEARN', 'HEART', 'POWER', 'MAGIC',
+const LANGUAGE_OPTIONS = [
+  { value: 'en', label: 'English' },
+  { value: 'fr', label: 'French' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'de', label: 'German' },
+  { value: 'it', label: 'Italian' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'ru', label: 'Russian' },
+  { value: 'zh', label: 'Chinese' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'ko', label: 'Korean' },
+  { value: 'hi', label: 'Hindi' },
+  { value: 'ar', label: 'Arabic' },
+  { value: 'tr', label: 'Turkish' },
+  { value: 'nl', label: 'Dutch' },
+  { value: 'pl', label: 'Polish' },
+  { value: 'vi', label: 'Vietnamese' },
+  { value: 'sv', label: 'Swedish' },
+  { value: 'fi', label: 'Finnish' },
 ];
+
+const TRANSLATION_ENDPOINTS = [
+  'https://libretranslate.de/translate',
+  'https://translate.argosopentech.com/translate',
+];
+
+const latinizeText = (text) => {
+  return text
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/ß/g, 'ss')
+    .replace(/Æ/g, 'AE')
+    .replace(/æ/g, 'ae')
+    .replace(/Œ/g, 'OE')
+    .replace(/œ/g, 'oe')
+    .replace(/[^A-Za-z ]/g, '');
+};
+
+const cleanWordForASL = (text) => {
+  return latinizeText(text).toUpperCase();
+};
+
+const translateText = async (text, sourceLang) => {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  const googleUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLang)}&tl=en&dt=t&q=${encodeURIComponent(trimmed)}`;
+  try {
+    const response = await fetch(googleUrl);
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data) && Array.isArray(data[0]) && typeof data[0][0][0] === 'string') {
+        return data[0].map((item) => item[0]).join('');
+      }
+    }
+  } catch (err) {
+    console.warn('Google translate fetch failed:', err);
+  }
+
+  for (const endpoint of TRANSLATION_ENDPOINTS) {
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: trimmed, source: sourceLang, target: 'en', format: 'text' }),
+      });
+      if (!response.ok) continue;
+      const data = await response.json();
+      if (typeof data.translatedText === 'string' && data.translatedText.trim()) {
+        return data.translatedText;
+      }
+      if (typeof data.translation === 'string' && data.translation.trim()) {
+        return data.translation;
+      }
+    } catch (err) {
+      console.warn('Fallback translate fetch failed:', err);
+      continue;
+    }
+  }
+  return null;
+};
 
 const GE = new fp.GestureEstimator(ASLAlphabet);
 
@@ -55,9 +131,16 @@ const LearnSigns = () => {
 
   const [prediction, setPrediction] = useState('');
   const [cameraOn, setCameraOn] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [sourcePhrase, setSourcePhrase] = useState('HELLO');
   const [targetWord, setTargetWord] = useState('HELLO');
   const [selectedLetter, setSelectedLetter] = useState('');
   const [completedLetters, setCompletedLetters] = useState([]);
+  const [showReference, setShowReference] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testStatus, setTestStatus] = useState('Awaiting...');
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState(false);
 
   const gestureHistoryRef = useRef([]);
   const pinkyPathRef = useRef([]);
@@ -161,7 +244,7 @@ const LearnSigns = () => {
         gestureHistoryRef.current.push(fingerposeGesture);
         if (gestureHistoryRef.current.length > BUFFER_SIZE) gestureHistoryRef.current.shift();
 
-        let { mostFrequent, counts } = getMostFrequentGesture(gestureHistoryRef.current);
+        let { mostFrequent } = getMostFrequentGesture(gestureHistoryRef.current);
 
         if (mostFrequent === 'J' || mostFrequent === 'I') {
           mostFrequent = isDrawingJCurve(pinkyPathRef.current) ? "J" : "I";
@@ -171,24 +254,6 @@ const LearnSigns = () => {
         }
 
         setPrediction(mostFrequent || '');
-
-        // Auto-confirm letter match
-        const conf = counts[mostFrequent] ? (counts[mostFrequent] / BUFFER_SIZE) : 0;
-        if (mostFrequent && mostFrequent.length === 1 && conf >= 0.7) {
-          stableCountRef.current++;
-          if (stableCountRef.current >= 90) {
-            // Check if this letter matches a target letter
-            const wordLetters = targetWord.split('');
-            const nextIdx = completedLetters.length;
-            if (nextIdx < wordLetters.length && mostFrequent === wordLetters[nextIdx]) {
-              setCompletedLetters(prev => [...prev, mostFrequent]);
-            }
-            stableCountRef.current = 0;
-            gestureHistoryRef.current = [];
-          }
-        } else {
-          stableCountRef.current = 0;
-        }
       } else {
         if (gestureHistoryRef.current.length > 0) gestureHistoryRef.current.shift();
         pinkyPathRef.current = [];
@@ -228,29 +293,97 @@ const LearnSigns = () => {
 
   const handleStopCamera = () => {
     setCameraOn(false);
+    setIsTesting(false);
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     setPrediction('');
   };
 
   // --- Word Controls ---
-  const handleNewWord = () => {
-    const rand = PRACTICE_WORDS[Math.floor(Math.random() * PRACTICE_WORDS.length)];
-    setTargetWord(rand);
-    setCompletedLetters([]);
-    setSelectedLetter(rand[0]);
+  const getFirstValidLetter = (word) => {
+    return word.split('').find((char) => char !== ' ') || '';
+  };
+
+  const handleLanguageChange = (event) => {
+    setSelectedLanguage(event.target.value);
+  };
+
+  const handleSourceChange = (event) => {
+    setSourcePhrase(event.target.value);
   };
 
   const handleLetterClick = (letter) => {
+    if (letter === ' ') return;
     setSelectedLetter(letter);
+    setShowReference(false);
+    setIsTesting(false);
+    setTestStatus('Awaiting...');
   };
 
-  // Select first letter on mount or word change
-  useEffect(() => {
-    if (targetWord) {
-      setSelectedLetter(targetWord[0]);
-      setCompletedLetters([]);
+  const handleTestLetter = () => {
+    if (!selectedLetter) return;
+    if (!cameraOn) {
+      handleStartCamera();
     }
+    setIsTesting(true);
+    setTestStatus('Awaiting...');
+  };
+
+  const toggleReference = () => {
+    setShowReference((prev) => !prev);
+  };
+
+  useEffect(() => {
+    let active = true;
+    const normalizeText = sourcePhrase.trim();
+
+    const updateTranslation = async () => {
+      if (normalizeText === '') {
+        setTargetWord('');
+        setTranslationError(false);
+        return;
+      }
+
+      if (selectedLanguage === 'en') {
+        setTargetWord(cleanWordForASL(normalizeText));
+        setTranslationError(false);
+        return;
+      }
+
+      setIsTranslating(true);
+      setTranslationError(false);
+      const translated = await translateText(normalizeText, selectedLanguage);
+      if (!active) return;
+      if (translated) {
+        setTargetWord(cleanWordForASL(translated));
+        setTranslationError(false);
+      } else {
+        setTargetWord('');
+        setTranslationError(true);
+      }
+      setIsTranslating(false);
+    };
+
+    updateTranslation();
+    return () => { active = false; };
+  }, [selectedLanguage, sourcePhrase]);
+
+  useEffect(() => {
+    setCompletedLetters([]);
+    setSelectedLetter(getFirstValidLetter(targetWord));
+    setShowReference(false);
+    setIsTesting(false);
+    setTestStatus('Awaiting...');
   }, [targetWord]);
+
+  useEffect(() => {
+    if (!isTesting || !selectedLetter || !prediction) return;
+    if (prediction === selectedLetter) {
+      setTestStatus('Correct');
+      setCompletedLetters((prev) => prev.includes(selectedLetter) ? prev : [...prev, selectedLetter]);
+    } else {
+      setTestStatus('Awaiting...');
+    }
+  }, [prediction, isTesting, selectedLetter]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -260,7 +393,9 @@ const LearnSigns = () => {
   }, []);
 
   const wordLetters = targetWord.split('');
-  const isWordComplete = completedLetters.length === wordLetters.length;
+  const visibleLetters = wordLetters.filter((char) => char !== ' ');
+  const totalLetters = visibleLetters.length;
+  const isWordComplete = completedLetters.length === totalLetters;
 
   return (
     <div className="learn-page">
@@ -330,68 +465,104 @@ const LearnSigns = () => {
 
         {/* ── Right Column: Learning Sidebar ── */}
         <div className="learn-sidebar-col">
-          {/* Card 1: Target Word */}
+          {/* Card 1: Language Input */}
           <div className="card learn-word-card">
-            <div className="learn-word-header">
-              <div>
-                <p className="learn-word-label">Target Word</p>
-                <h2 className="learn-word-value">{targetWord}</h2>
-              </div>
-              <button className="btn btn-new-word" onClick={handleNewWord}>
-                <svg className="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                </svg>
-                New Word
-              </button>
+            <div className="learn-language-controls">
+              <label className="learn-language-field">
+                <span>Language</span>
+                <select value={selectedLanguage} onChange={handleLanguageChange}>
+                  {LANGUAGE_OPTIONS.map((lang) => (
+                    <option key={lang.value} value={lang.value}>{lang.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="learn-language-field">
+                <span>Phrase</span>
+                <input
+                  type="text"
+                  value={sourcePhrase}
+                  onChange={handleSourceChange}
+                  placeholder="Bonjour, Hola, Hallo..."
+                />
+              </label>
             </div>
-            {/* Progress bar */}
+            <div className="learn-word-translation">
+              <p className="learn-word-label">English translation</p>
+              <h2 className="learn-word-value">
+                {isTranslating ? 'Translating…' : (targetWord || '...')}
+              </h2>
+              {translationError && (
+                <p className="learn-translation-error">Translation failed. Please try another phrase or language.</p>
+              )}
+            </div>
             <div className="learn-progress-track">
               <div
                 className="learn-progress-fill"
-                style={{ width: `${(completedLetters.length / wordLetters.length) * 100}%` }}
+                style={{ width: `${(completedLetters.length / Math.max(totalLetters, 1)) * 100}%` }}
               />
             </div>
             <p className="learn-progress-text">
               {isWordComplete
                 ? '🎉 Word complete!'
-                : `${completedLetters.length} / ${wordLetters.length} letters`
+                : `${completedLetters.length} / ${totalLetters} letters`
               }
             </p>
           </div>
 
           {/* Card 2: Interactive Word Speller */}
           <div className="card learn-speller-card">
-            <p className="learn-speller-label">Spell it out</p>
-            <div className="learn-speller-letters">
-              {wordLetters.map((letter, idx) => {
-                const isCompleted = idx < completedLetters.length;
-                const isActive = letter === selectedLetter && !isCompleted;
-                const isNext = idx === completedLetters.length;
-                return (
-                  <button
-                    key={idx}
-                    className={`speller-letter ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''} ${isNext ? 'next' : ''}`}
-                    onClick={() => handleLetterClick(letter)}
-                  >
-                    {letter}
-                  </button>
-                );
-              })}
+            <div className="learn-speller-header">
+              <p className="learn-speller-label">Spell it out</p>
+              <button className="btn btn-test" onClick={handleTestLetter}>
+                {cameraOn ? 'Test Letter' : 'Start Test'}
+              </button>
             </div>
-            <p className="learn-speller-hint">Click each letter to show ASL</p>
+            <div className="learn-speller-letters">
+              {(() => {
+                let visibleIndex = 0;
+                return wordLetters.map((letter, idx) => {
+                  if (letter === ' ') {
+                    return <div key={idx} className="speller-gap" />;
+                  }
+                  const isCompleted = visibleIndex < completedLetters.length;
+                  const isActive = letter === selectedLetter && !isCompleted;
+                  const isNext = visibleIndex === completedLetters.length;
+                  visibleIndex += 1;
+                  return (
+                    <button
+                      key={idx}
+                      className={`speller-letter ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''} ${isNext ? 'next' : ''}`}
+                      onClick={() => handleLetterClick(letter)}
+                    >
+                      {letter}
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+            <p className={`learn-test-status ${testStatus === 'Correct' ? 'correct' : ''}`}>
+              {testStatus}
+            </p>
+            <p className="learn-speller-hint">Select a letter, then press Test Letter to compare your gesture.</p>
           </div>
 
           {/* Card 3: Reference Sign Image */}
           <div className="card learn-reference-card">
             <div className="learn-reference-header">
               <p className="learn-reference-label">Reference Sign</p>
-              {selectedLetter && (
-                <span className="learn-reference-badge">{selectedLetter}</span>
-              )}
+              <div className="learn-reference-header-actions">
+                {selectedLetter && (
+                  <span className="learn-reference-badge">{selectedLetter}</span>
+                )}
+                {selectedLetter && (
+                  <button className="btn btn-toggle-ref" onClick={toggleReference}>
+                    {showReference ? 'Hide' : 'Show'}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="learn-reference-image-box">
-              {selectedLetter && SIGN_IMAGES[selectedLetter] ? (
+              {selectedLetter && showReference && SIGN_IMAGES[selectedLetter] ? (
                 <img
                   src={SIGN_IMAGES[selectedLetter]}
                   alt={`ASL sign for ${selectedLetter}`}
@@ -403,7 +574,11 @@ const LearnSigns = () => {
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <polyline points="14 2 14 8 20 8" />
                   </svg>
-                  <p>Select a letter above</p>
+                  <p>
+                    {selectedLetter
+                      ? 'Reference is hidden. Open it to view the sign.'
+                      : 'Select a letter above to enable the reference.'}
+                  </p>
                 </div>
               )}
             </div>
