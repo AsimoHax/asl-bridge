@@ -231,7 +231,7 @@ const LearnSigns = () => {
         if (indexPathRef.current.length > BUFFER_SIZE) indexPathRef.current.shift();
 
         if (transformed.length === 21) {
-          const gesture = GE.estimate(transformed, 8.5);
+          const gesture = GE.estimate(transformed, 7.0);
           if (gesture.gestures && gesture.gestures.length > 0) {
             const scores = gesture.gestures.map(p => p.score);
             const maxIdx = scores.indexOf(Math.max(...scores));
@@ -525,29 +525,37 @@ const LearnSigns = () => {
                 {cameraOn ? 'Test Letter' : 'Start Test'}
               </button>
             </div>
-            <div className="learn-speller-letters">
-              {(() => {
-                let visibleIndex = 0;
-                return wordLetters.map((letter, idx) => {
-                  if (letter === ' ') {
-                    return <div key={idx} className="speller-gap" />;
-                  }
-                  const isCompleted = completedIndices.includes(visibleIndex);
-                  const isActive = letter === selectedLetter && visibleIndex === selectedIndex && !isCompleted;
-                  const isNext = visibleIndex === completedIndices.length;
-                  visibleIndex += 1;
-                  return (
-                    <button
-                      key={idx}
-                      className={`speller-letter ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''} ${isNext ? 'next' : ''}`}
-                      onClick={() => handleLetterClick(letter, visibleIndex)}
-                    >
-                      {letter}
-                    </button>
-                  );
-                });
-              })()}
-            </div>
+          <div className="learn-speller-letters">
+            {(() => {
+              let visibleIndex = 0;
+              return wordLetters.map((letter, idx) => {
+                if (letter === ' ') {
+                  return <div key={idx} className="speller-gap" />;
+                }
+                
+                // 1. Capture the exact index for this specific valid letter
+                const currentIndex = visibleIndex;
+                
+                // 2. Safely increment the counter for the next loop iteration
+                visibleIndex += 1;
+
+                // 3. Evaluate your states using the stable currentIndex
+                const isCompleted = completedIndices.includes(currentIndex);
+                const isActive = letter === selectedLetter && currentIndex === selectedIndex && !isCompleted;
+                const isNext = currentIndex === completedIndices.length;
+
+                return (
+                  <button
+                    key={idx}
+                    className={`speller-letter ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''} ${isNext ? 'next' : ''}`}
+                    onClick={() => handleLetterClick(letter, currentIndex)} // <-- Passing the correct index now!
+                  >
+                    {letter}
+                  </button>
+                );
+              });
+            })()}
+          </div>
             <p className={`learn-test-status ${testStatus === 'Correct' ? 'correct' : ''}`}>
               {testStatus}
             </p>

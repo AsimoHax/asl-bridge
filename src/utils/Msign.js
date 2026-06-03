@@ -1,33 +1,6 @@
 import {Finger, FingerCurl, FingerDirection, GestureDescription} from 'fingerpose';
 
 export const mSign = new GestureDescription('M');
-// [
-//     [
-//       "Thumb",
-//       "Half Curl",
-//       "Diagonal Up Left"
-//     ],
-//     [
-//       "Index",
-//       "Full Curl",
-//       "Diagonal Up Right"
-//     ],
-//     [
-//       "Middle",
-//       "Full Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Ring",
-//       "Full Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Pinky",
-//       "Full Curl",
-//       "Vertical Up"
-//     ]
-//   ]
 
 //Thumb
 mSign.addCurl(Finger.Thumb, FingerCurl.HalfCurl, 1.0);

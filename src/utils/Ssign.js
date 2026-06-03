@@ -1,51 +1,25 @@
-import {Finger, FingerCurl, FingerDirection, GestureDescription} from 'fingerpose';
+import { Finger, FingerCurl, FingerDirection, GestureDescription } from 'fingerpose';
 
 export const sSign = new GestureDescription('S');
-// [
-//     [
-//       "Thumb",
-//       "Half Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Index",
-//       "Full Curl",
-//       "Diagonal Up Right"
-//     ],
-//     [
-//       "Middle",
-//       "Full Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Ring",
-//       "Full Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Pinky",
-//       "Full Curl",
-//       "Diagonal Up Left"
-//     ]
-//   ]
 
-//Thumb
+// ==========================================
+// THUMB: Crossing diagonally over the front knuckles
+// ==========================================
+// In 'S', the thumb is on the outside, resting loosely over the fingers.
 sSign.addCurl(Finger.Thumb, FingerCurl.HalfCurl, 1.0);
-sSign.addDirection(Finger.Index, FingerDirection.VerticalUp, 0.70);
+sSign.addCurl(Finger.Thumb, FingerCurl.NoCurl, 0.9);
+sSign.addCurl(Finger.Thumb, FingerCurl.FullCurl, 0.2); // Heavily penalize the deep tuck of 'E'!
 
-//Index
-sSign.addCurl(Finger.Index, FingerCurl.FullCurl, 1);
-sSign.addDirection(Finger.Index, FingerDirection.DiagonalUpRight, 0.70);
+// If the thumb goes purely horizontal, 'S' will instantly lose points.
+sSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpRight, 1.0);
+sSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpLeft, 1.0);
+sSign.addDirection(Finger.Thumb, FingerDirection.VerticalUp, 0.6); // Straight up fallback
 
-//Middle
-sSign.addCurl(Finger.Middle, FingerCurl.FullCurl, 1);
-sSign.addDirection(Finger.Middle, FingerDirection.VerticalUp, 0.70);
+// ==========================================
+// INDEX, MIDDLE, RING, PINKY: Balled Fist Base
+// ==========================================
+for (const finger of [Finger.Index, Finger.Middle, Finger.Ring, Finger.Pinky]) {
+    sSign.addCurl(finger, FingerCurl.FullCurl, 1.0);
+    sSign.addCurl(finger, FingerCurl.HalfCurl, 0.6); // Loose fist fallback
 
-//Ring
-sSign.addCurl(Finger.Ring, FingerCurl.FullCurl, 1);
-sSign.addDirection(Finger.Ring, FingerDirection.VerticalUp, 0.70);
-
-//Pinky
-sSign.addCurl(Finger.Pinky, FingerCurl.FullCurl, 1);
-sSign.addDirection(Finger.Pinky, FingerDirection.DiagonalUpLeft, 0.70);
-
+}

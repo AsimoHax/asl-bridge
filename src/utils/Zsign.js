@@ -1,33 +1,7 @@
 import {Finger, FingerCurl, FingerDirection, GestureDescription} from 'fingerpose';
 
 export const zSign = new GestureDescription('Z');
-// [
-//     [
-//       "Thumb",
-//       "No Curl",
-//       "Horizontal Left"
-//     ],
-//     [
-//       "Index",
-//       "No Curl",
-//       "Diagonal Up Left"
-//     ],
-//     [
-//       "Middle",
-//       "Full Curl",
-//       "Horizontal Left"
-//     ],
-//     [
-//       "Ring",
-//       "Full Curl",
-//       "Horizontal Left"
-//     ],
-//     [
-//       "Pinky",
-//       "Full Curl",
-//       "Horizontal Left"
-//     ]
-//   ]
+
 
 //Thumb
 zSign.addCurl(Finger.Thumb, FingerCurl.NoCurl, 0.8);

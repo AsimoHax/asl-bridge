@@ -8,8 +8,6 @@ export const oSign = new GestureDescription('O');
 // In a true 'O', the thumb bends at the knuckle. Forcing NoCurl makes it a 'C'.
 oSign.addCurl(Finger.Thumb, FingerCurl.HalfCurl, 1.0);
 oSign.addCurl(Finger.Thumb, FingerCurl.NoCurl, 0.7); // Fallback for flat hands
-
-// Fixed typo: targeting Finger.Thumb.
 oSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpRight, 0.8);
 oSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpLeft, 0.8);
 oSign.addDirection(Finger.Thumb, FingerDirection.VerticalUp, 0.8);

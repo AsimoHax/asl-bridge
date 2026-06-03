@@ -1,37 +1,10 @@
 import {Finger, FingerCurl, FingerDirection, GestureDescription} from 'fingerpose';
 
 export const wSign = new GestureDescription('W');
-// [
-//     [
-//       "Thumb",
-//       "Half Curl",
-//       "Diagonal Up Left"
-//     ],
-//     [
-//       "Index",
-//       "No Curl",
-//       "Diagonal Up Right"
-//     ],
-//     [
-//       "Middle",
-//       "No Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Ring",
-//       "No Curl",
-//       "Diagonal Up Left"
-//     ],
-//     [
-//       "Pinky",
-//       "Full Curl",
-//       "Diagonal Up Left"
-//     ]
-//   ]
 
 //Thumb
 wSign.addCurl(Finger.Thumb, FingerCurl.HalfCurl, 1.0);
-wSign.addDirection(Finger.Index, FingerDirection.DiagonalUpLeft, 0.70);
+wSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpLeft, 0.70);
 
 //Index
 wSign.addCurl(Finger.Index, FingerCurl.NoCurl, 1);

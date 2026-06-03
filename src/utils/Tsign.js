@@ -1,51 +1,23 @@
-import {Finger, FingerCurl, FingerDirection, GestureDescription} from 'fingerpose';
+import { Finger, FingerCurl, FingerDirection, GestureDescription } from 'fingerpose';
 
 export const tSign = new GestureDescription('T');
-// [
-//     [
-//       "Thumb",
-//       "No Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Index",
-//       "Full Curl",
-//       "Diagonal Up Right"
-//     ],
-//     [
-//       "Middle",
-//       "Full Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Ring",
-//       "Full Curl",
-//       "Vertical Up"
-//     ],
-//     [
-//       "Pinky",
-//       "Full Curl",
-//       "Diagonal Up Left"
-//     ]
-//   ]
 
-//Thumb
-tSign.addCurl(Finger.Thumb, FingerCurl.NoCurl, 1.0);
-tSign.addDirection(Finger.Index, FingerDirection.VerticalUp, 0.70);
+// ==========================================
+// THUMB: Tucked tightly over the index knuckle
+// ==========================================
+// In a real 'T', the thumb bends over the knuckle, making HalfCurl the truest match.
+tSign.addCurl(Finger.Thumb, FingerCurl.HalfCurl, 1.0); 
+tSign.addCurl(Finger.Thumb, FingerCurl.NoCurl, 0.75); // Lowered fallback weight
 
-//Index
-tSign.addCurl(Finger.Index, FingerCurl.FullCurl, 1);
-tSign.addDirection(Finger.Index, FingerDirection.DiagonalUpRight, 0.70);
+// We lower the direction weights so a slight diagonal slant doesn't get a perfect score.
+tSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpRight, 0.85);
+tSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpLeft, 0.85);
+tSign.addDirection(Finger.Thumb, FingerDirection.VerticalUp, 0.60); // Low priority safety net
 
-//Middle
-tSign.addCurl(Finger.Middle, FingerCurl.FullCurl, 1);
-tSign.addDirection(Finger.Middle, FingerDirection.VerticalUp, 0.70);
-
-//Ring
-tSign.addCurl(Finger.Ring, FingerCurl.FullCurl, 1);
-tSign.addDirection(Finger.Ring, FingerDirection.VerticalUp, 0.70);
-
-//Pinky
-tSign.addCurl(Finger.Pinky, FingerCurl.FullCurl, 1);
-tSign.addDirection(Finger.Pinky, FingerDirection.DiagonalUpLeft, 0.70);
-
+// ==========================================
+// INDEX, MIDDLE, RING, PINKY: Curled Fist
+// ==========================================
+for (const finger of [Finger.Index, Finger.Middle, Finger.Ring, Finger.Pinky]) {
+    tSign.addCurl(finger, FingerCurl.FullCurl, 1.0);
+    tSign.addCurl(finger, FingerCurl.HalfCurl, 0.6);
+}

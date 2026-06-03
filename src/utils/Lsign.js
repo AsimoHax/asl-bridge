@@ -8,11 +8,8 @@ export const lSign = new GestureDescription('L');
 lSign.addCurl(Finger.Thumb, FingerCurl.NoCurl, 1.0);
 
 // Crucial Change: The thumb must point sideways, not up!
-// This explicitly prevents it from overlapping with the tucked 'D' thumb.
 lSign.addDirection(Finger.Thumb, FingerDirection.HorizontalRight, 1.0);
 lSign.addDirection(Finger.Thumb, FingerDirection.HorizontalLeft, 1.0);
-
-// Optional: Keep diagonals with a lower confidence just in case of lazy signing
 lSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpRight, 0.6);
 lSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpLeft, 0.6);
 
