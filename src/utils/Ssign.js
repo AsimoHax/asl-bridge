@@ -2,24 +2,18 @@ import { Finger, FingerCurl, FingerDirection, GestureDescription } from 'fingerp
 
 export const sSign = new GestureDescription('S');
 
-// ==========================================
-// THUMB: Crossing diagonally over the front knuckles
-// ==========================================
-// In 'S', the thumb is on the outside, resting loosely over the fingers.
+// THUMB: Flat over the front knuckles
 sSign.addCurl(Finger.Thumb, FingerCurl.HalfCurl, 1.0);
-sSign.addCurl(Finger.Thumb, FingerCurl.NoCurl, 0.9);
-sSign.addCurl(Finger.Thumb, FingerCurl.FullCurl, 0.2); // Heavily penalize the deep tuck of 'E'!
+sSign.addCurl(Finger.Thumb, FingerCurl.NoCurl, 0.8);
 
-// If the thumb goes purely horizontal, 'S' will instantly lose points.
-sSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpRight, 1.0);
-sSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpLeft, 1.0);
-sSign.addDirection(Finger.Thumb, FingerDirection.VerticalUp, 0.6); // Straight up fallback
+// Completely strip VerticalUp! S thumb must cross the hand.
+sSign.addDirection(Finger.Thumb, FingerDirection.HorizontalLeft, 1.0);
+sSign.addDirection(Finger.Thumb, FingerDirection.HorizontalRight, 1.0);
+sSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpRight, 0.9);
+sSign.addDirection(Finger.Thumb, FingerDirection.DiagonalUpLeft, 0.9);
 
-// ==========================================
-// INDEX, MIDDLE, RING, PINKY: Balled Fist Base
-// ==========================================
+// FIST BASE
 for (const finger of [Finger.Index, Finger.Middle, Finger.Ring, Finger.Pinky]) {
     sSign.addCurl(finger, FingerCurl.FullCurl, 1.0);
-    sSign.addCurl(finger, FingerCurl.HalfCurl, 0.6); // Loose fist fallback
-
+    sSign.addCurl(finger, FingerCurl.HalfCurl, 0.3); // Kept strict to reject T
 }
